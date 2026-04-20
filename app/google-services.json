@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "704131788959",
+    "project_id": "employeetracker-ef17a",
+    "storage_bucket": "employeetracker-ef17a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:704131788959:android:66973a94c3f06a61ecf2aa",
+        "android_client_info": {
+          "package_name": "com.mindmatrix.employeetracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIQGtQusevkOEHoHEs3JwoIp-30-e-f5Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
