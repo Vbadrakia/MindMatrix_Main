@@ -159,6 +159,18 @@ class AuthViewModel @Inject constructor(
         _authState.value = AuthState()
     }
 
+    fun resetPassword(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                auth.sendPasswordResetEmail(email)
+                    .addOnSuccessListener { onSuccess() }
+                    .addOnFailureListener { e -> onError(e.localizedMessage ?: "Failed to send reset email") }
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "An error occurred")
+            }
+        }
+    }
+
     fun clearError() {
         _authState.value = _authState.value.copy(error = null)
     }

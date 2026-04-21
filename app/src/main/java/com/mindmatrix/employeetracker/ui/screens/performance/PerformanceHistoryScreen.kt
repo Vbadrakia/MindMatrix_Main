@@ -128,7 +128,11 @@ fun PerformanceHistoryScreen(
 
             if (performanceState.reviews.isEmpty()) {
                 item {
-                    EmptyStateCard(message = "No performance reviews found yet")
+                    EmptyState(
+                        icon = Icons.Default.Assessment,
+                        title = "No reviews yet",
+                        subtitle = "Performance evaluations will appear here once submitted by your lead."
+                    )
                 }
             } else {
                 items(performanceState.reviews.sortedByDescending { it.reviewDate }) { review ->
@@ -171,30 +175,22 @@ fun PerformanceReviewCard(review: com.mindmatrix.employeetracker.data.model.Perf
                         fontWeight = FontWeight.Medium
                     )
                 }
-                
-                Surface(
-                    color = PrimaryContainer,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "${review.overallScore.toInt()}%",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Black,
-                        color = Primary
-                    )
-                }
+                StarRatingWidget(
+                    rating = review.weightedScore.toInt(),
+                    starSize = 20.dp,
+                    modifier = Modifier.padding(vertical = 6.dp)
+                )
             }
             
             Spacer(modifier = Modifier.height(20.dp))
 
             // Score breakdown with progress bars
             val breakdownItems = listOf(
-                Triple("Productivity", review.productivityScore, Success),
-                Triple("Quality", review.qualityScore, Primary),
-                Triple("Attendance", review.attendanceScore, Tertiary),
-                Triple("Teamwork", review.teamworkScore, SecondaryDark),
-                Triple("Soft Skills", review.softSkillsScore, PriorityMedium)
+                Triple("Productivity", review.timelinessScore.toFloat(), Success),
+                Triple("Quality", review.qualityScore.toFloat(), Primary),
+                Triple("Attendance", review.attendanceScore.toFloat(), Tertiary),
+                Triple("Teamwork", review.communicationScore.toFloat(), SecondaryDark),
+                Triple("Soft Skills", review.innovationScore.toFloat(), PriorityMedium)
             )
 
             breakdownItems.forEach { (label, score, color) ->
@@ -211,7 +207,7 @@ fun PerformanceReviewCard(review: com.mindmatrix.employeetracker.data.model.Perf
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "$score",
+                            text = "${score.toInt()}/5",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = OnSurface

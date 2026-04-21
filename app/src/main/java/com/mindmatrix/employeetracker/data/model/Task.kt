@@ -24,7 +24,8 @@ data class Task(
     val dueDate: String = "",
     val createdAt: String = "",
     val completedAt: String = "",
-    val comments: String = ""
+    val comments: String = "",
+    val attachments: List<String> = emptyList()
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
         "title" to title,
@@ -36,7 +37,8 @@ data class Task(
         "dueDate" to dueDate,
         "createdAt" to createdAt,
         "completedAt" to completedAt,
-        "comments" to comments
+        "comments" to comments,
+        "attachments" to attachments
     )
 
     companion object {
@@ -59,7 +61,8 @@ data class Task(
             dueDate = map["dueDate"] as? String ?: "",
             createdAt = map["createdAt"] as? String ?: "",
             completedAt = map["completedAt"] as? String ?: "",
-            comments = map["comments"] as? String ?: ""
+            comments = map["comments"] as? String ?: "",
+            attachments = @Suppress("UNCHECKED_CAST") (map["attachments"] as? List<String> ?: emptyList())
         )
     }
 }
@@ -68,6 +71,7 @@ enum class TaskStatus {
     PENDING,
     IN_PROGRESS,
     COMPLETED,
+    REVIEWED,
     OVERDUE,
     CANCELLED
 }

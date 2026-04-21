@@ -73,11 +73,26 @@ class EmployeeViewModel @Inject constructor(
         _selectedEmployee.value = employee
     }
 
+    fun filterByRole(currentUser: Employee?) {
+        if (currentUser == null) return
+        when (currentUser.role) {
+            com.mindmatrix.employeetracker.data.model.UserRole.ADMIN -> filterByDepartment(null)
+            com.mindmatrix.employeetracker.data.model.UserRole.LEAD -> filterByDepartment(currentUser.department)
+            com.mindmatrix.employeetracker.data.model.UserRole.EMPLOYEE -> filterByDepartment(null)
+        }
+    }
+
     fun loadEmployeeById(id: String) {
         viewModelScope.launch {
             employeeRepository.getEmployeeById(id).collect { employee ->
                 _selectedEmployee.value = employee
             }
+        }
+    }
+
+    fun loadEmployeesByDepartment(department: String) {
+        viewModelScope.launch {
+            filterByDepartment(department)
         }
     }
 

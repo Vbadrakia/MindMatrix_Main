@@ -97,22 +97,27 @@ class SampleDataGenerator @Inject constructor(
 
         // 3. Generate Performance Reviews for last month
         employeeIds.forEach { empId ->
+            val quality = Random.nextInt(75, 95)
+            val timeliness = Random.nextInt(70, 95)
+            val attendance = Random.nextInt(85, 100)
+            val communication = Random.nextInt(75, 100)
+            val innovation = Random.nextInt(60, 95)
+            
             val review = PerformanceReview(
                 employeeId = empId,
                 reviewerId = adminId,
                 reviewDate = LocalDate.now().withDayOfMonth(1).format(dateFormatter),
                 period = "${lastMonth.month.name} ${lastMonth.year}",
-                productivityScore = Random.nextInt(70, 100),
-                qualityScore = Random.nextInt(75, 95),
-                attendanceScore = Random.nextInt(80, 100),
-                teamworkScore = Random.nextInt(70, 100),
-                softSkillsScore = Random.nextInt(75, 100),
-                overallScore = Random.nextDouble(3.5, 5.0),
+                qualityScore = quality,
+                timelinessScore = timeliness,
+                attendanceScore = attendance,
+                communicationScore = communication,
+                innovationScore = innovation,
                 status = ReviewStatus.APPROVED,
                 comments = "Consistently delivering high-quality work during ${lastMonth.month.name}.",
                 strengths = "Technical proficiency, team collaboration",
                 areasForImprovement = "Time estimation"
-            )
+            ).withCalculatedScores()
             performanceRepository.addReview(review)
         }
     }

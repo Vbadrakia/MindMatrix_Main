@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -38,6 +39,7 @@ fun EmployeeListScreen(
     val isAdmin = authState.currentEmployee?.role == UserRole.ADMIN
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var employeeToDelete by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(authState.currentEmployee) {
         employeeViewModel.filterByRole(authState.currentEmployee)
@@ -50,6 +52,18 @@ fun EmployeeListScreen(
                 employeeViewModel.addEmployee(employee)
                 showAddDialog = false
             }
+        )
+    }
+
+    if (employeeToDelete != null) {
+        com.mindmatrix.employeetracker.ui.components.ConfirmationDialog(
+            title = "Delete Employee",
+            message = "Are you sure you want to delete this employee? This action cannot be undone.",
+            onConfirm = {
+                employeeViewModel.deleteEmployee(employeeToDelete!!)
+                employeeToDelete = null
+            },
+            onDismiss = { employeeToDelete = null }
         )
     }
 
@@ -102,9 +116,10 @@ fun EmployeeListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
-                    .clip(RoundedCornerShape(16.dp)),
+                    .clip(RoundedCornerShape(16.dp))
+                    .heightIn(min = 56.dp),
                 placeholder = { Text("Search by name or role...", color = OnSurfaceVariant.copy(alpha = 0.6f)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Primary) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search icon", tint = Primary) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = SurfaceVariantDark,
                     unfocusedContainerColor = SurfaceVariantDark,
@@ -184,11 +199,18 @@ fun EmployeeListScreen(
             if (state.isLoading) {
                 LoadingOverlay(isLoading = true)
             } else if (state.filteredEmployees.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Default.PersonOff,
-                    title = "No employees found",
-                    subtitle = if (state.searchQuery.isNotBlank()) "Try a different search" else "Add employees to get started"
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    EmptyState(
+                        icon = Icons.Default.PeopleOutline,
+                        title = "No teammates found",
+                        subtitle = if (state.searchQuery.isNotBlank()) 
+                            "We couldn't find anyone matching \"${state.searchQuery}\"." 
+                            else "It looks like your team directory is currently empty."
+                    )
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -198,7 +220,8 @@ fun EmployeeListScreen(
                     items(state.filteredEmployees) { employee ->
                         EmployeeDirectoryCard(
                             employee = employee,
-                            onClick = { onEmployeeClick(employee.id) }
+                            onClick = { onEmployeeClick(employee.id) },
+                            onDelete = if (isAdmin) { { employeeToDelete = employee.id } } else null
                         )
                     }
                     item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -211,7 +234,8 @@ fun EmployeeListScreen(
 @Composable
 fun EmployeeDirectoryCard(
     employee: Employee,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -281,7 +305,7 @@ fun EmployeeDirectoryCard(
                         onClick = onClick,
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
+                            .height(48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PrimaryContainer,
                             contentColor = PrimaryDark
@@ -292,19 +316,21 @@ fun EmployeeDirectoryCard(
                         Text("View Profile", fontWeight = FontWeight.Bold)
                     }
                     
-                    FilledTonalIconButton(
-                        onClick = { },
-                        modifier = Modifier.size(44.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = SurfaceVariantDark,
-                            contentColor = Primary
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreHoriz,
-                            contentDescription = "More"
-                        )
+                    if (onDelete != null) {
+                        FilledTonalIconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = com.mindmatrix.employeetracker.ui.theme.ErrorContainer,
+                                contentColor = com.mindmatrix.employeetracker.ui.theme.Error
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete ${employee.name}"
+                            )
+                        }
                     }
                 }
             }

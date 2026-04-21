@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mindmatrix.employeetracker.ui.theme.*
@@ -116,5 +117,3 @@ private class OvershootInterpolator(private val tension: Float) {
         return x * x * ((tension + 1) * x + tension) + 1.0f
     }
 }
-
-import androidx.compose.ui.graphics.graphicsLayer

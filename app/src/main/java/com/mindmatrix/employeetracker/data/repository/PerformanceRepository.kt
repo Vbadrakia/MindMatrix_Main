@@ -48,7 +48,8 @@ class PerformanceRepository @Inject constructor(
             .get()
             .await()
         val reviews = snapshot.documents.mapNotNull { doc ->
-            (doc.data?.get("overallScore") as? Number)?.toDouble()
+            (doc.data?.get("weightedScore") as? Number)?.toDouble()
+                ?: (doc.data?.get("overallScore") as? Number)?.toDouble() // Fallback
         }
         if (reviews.isNotEmpty()) reviews.average() else 0.0
     } catch (e: Exception) {
@@ -69,7 +70,10 @@ class PerformanceRepository @Inject constructor(
         val scoresByEmployee = reviewsSnapshot.documents
             .groupBy { it.data?.get("employeeId") as? String ?: "" }
             .mapValues { (_, docs) ->
-                docs.mapNotNull { (it.data?.get("overallScore") as? Number)?.toDouble() }.average()
+                docs.mapNotNull { 
+                    (it.data?.get("weightedScore") as? Number)?.toDouble()
+                        ?: (it.data?.get("overallScore") as? Number)?.toDouble()
+                }.average()
             }
 
         scoresByEmployee.entries
@@ -103,7 +107,10 @@ class PerformanceRepository @Inject constructor(
             }
 
         reviewsByDept.map { (dept, docs) ->
-            val scores = docs.mapNotNull { (it.data?.get("overallScore") as? Number)?.toDouble() }
+            val scores = docs.mapNotNull { 
+                (it.data?.get("weightedScore") as? Number)?.toDouble()
+                    ?: (it.data?.get("overallScore") as? Number)?.toDouble()
+            }
             DepartmentAverage(
                 department = dept,
                 averageScore = if (scores.isNotEmpty()) scores.average() else 0.0,

@@ -59,7 +59,12 @@ class TaskRepository @Inject constructor(
 
     override suspend fun updateTaskStatus(taskId: String, status: TaskStatus): Result<Unit> = try {
         collection.document(taskId).update("status", status.name).await()
-        // Note: In a real app, we'd fetch the full task or update it locally
+        // Fetch current task and update local Room DB
+        val snapshot = collection.document(taskId).get().await()
+        snapshot.data?.let { data ->
+            val updatedTask = Task.fromMap(taskId, data)
+            taskDao.insertTask(updatedTask)
+        }
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)

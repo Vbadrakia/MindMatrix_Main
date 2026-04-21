@@ -17,11 +17,15 @@ import com.mindmatrix.employeetracker.ui.screens.dashboard.LeadDashboardScreen
 import com.mindmatrix.employeetracker.ui.screens.employees.EmployeeDetailScreen
 import com.mindmatrix.employeetracker.ui.screens.employees.EmployeeListScreen
 import com.mindmatrix.employeetracker.ui.screens.login.LoginScreen
+import com.mindmatrix.employeetracker.ui.screens.login.ForgotPasswordScreen
 import com.mindmatrix.employeetracker.ui.screens.performance.PerformanceHistoryScreen
 import com.mindmatrix.employeetracker.ui.screens.reports.LeaderboardScreen
 import com.mindmatrix.employeetracker.ui.screens.reports.ReportsScreen
+import com.mindmatrix.employeetracker.ui.screens.splash.SplashScreen
 import com.mindmatrix.employeetracker.ui.screens.settings.SettingsScreen
+import com.mindmatrix.employeetracker.ui.screens.analytics.AnalyticsScreen
 import com.mindmatrix.employeetracker.ui.screens.tasks.TaskListScreen
+import com.mindmatrix.employeetracker.ui.screens.tasks.TaskDetailScreen
 import com.mindmatrix.employeetracker.viewmodel.AuthViewModel
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,7 +41,7 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = if (authState.isLoggedIn) Screen.Dashboard.route else Screen.Login.route,
+        startDestination = Screen.Splash.route,
         enterTransition = {
             fadeIn(animationSpec = tween(500)) + slideIntoContainer(
                 AnimatedContentTransitionScope.SlideDirection.Left,
@@ -63,6 +67,16 @@ fun AppNavGraph(
             )
         }
     ) {
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onSplashFinished = {
+                    navController.navigate(if (authState.isLoggedIn) Screen.Dashboard.route else Screen.Login.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Login.route) {
             LoginScreen(
                 authViewModel = authViewModel,
@@ -70,7 +84,17 @@ fun AppNavGraph(
                     navController.navigate(Screen.Dashboard.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
+                },
+                onForgotPassword = {
+                    navController.navigate(Screen.ForgotPassword.route)
                 }
+            )
+        }
+
+        composable(Screen.ForgotPassword.route) {
+            ForgotPasswordScreen(
+                onNavigateBack = { navController.popBackStack() },
+                authViewModel = authViewModel
             )
         }
 
@@ -78,15 +102,20 @@ fun AppNavGraph(
             when (authState.currentEmployee?.role) {
                 UserRole.ADMIN -> AdminDashboardScreen(
                     onNavigateToEmployees = { navController.navigate(Screen.Employees.route) },
-                    onNavigateToReports = { navController.navigate(Screen.Reports.route) }
+                    onNavigateToReports = { navController.navigate(Screen.Reports.route) },
+                    onNavigateToTasks = { navController.navigate(Screen.Tasks.route) },
+                    onNavigateToAnalytics = { navController.navigate(Screen.Analytics.route) },
+                    onNavigateToTaskDetail = { taskId -> navController.navigate(Screen.TaskDetail.createRoute(taskId)) }
                 )
                 UserRole.LEAD -> LeadDashboardScreen(
                     onNavigateToEmployees = { navController.navigate(Screen.Employees.route) },
-                    onNavigateToTasks = { navController.navigate(Screen.Tasks.route) }
+                    onNavigateToTasks = { navController.navigate(Screen.Tasks.route) },
+                    onNavigateToTaskDetail = { taskId -> navController.navigate(Screen.TaskDetail.createRoute(taskId)) }
                 )
                 else -> EmployeeDashboardScreen(
                     onNavigateToTasks = { navController.navigate(Screen.Tasks.route) },
-                    onNavigateToAttendance = { navController.navigate(Screen.Attendance.route) }
+                    onNavigateToAttendance = { navController.navigate(Screen.Attendance.route) },
+                    onNavigateToTaskDetail = { taskId -> navController.navigate(Screen.TaskDetail.createRoute(taskId)) }
                 )
             }
         }
@@ -116,7 +145,22 @@ fun AppNavGraph(
         }
 
         composable(Screen.Tasks.route) {
-            TaskListScreen()
+            TaskListScreen(
+                onTaskClick = { taskId ->
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.TaskDetail.route,
+            arguments = listOf(navArgument("taskId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val taskId = backStackEntry.arguments?.getString("taskId") ?: ""
+            TaskDetailScreen(
+                taskId = taskId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.Attendance.route) {
@@ -125,6 +169,13 @@ fun AppNavGraph(
 
         composable(Screen.Performance.route) {
             PerformanceHistoryScreen()
+        }
+
+        composable(Screen.Analytics.route) {
+            AnalyticsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToLeaderboard = { navController.navigate(Screen.Leaderboard.route) }
+            )
         }
 
         composable(Screen.Reports.route) {

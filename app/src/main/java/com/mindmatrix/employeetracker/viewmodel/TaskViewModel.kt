@@ -29,12 +29,16 @@ class TaskViewModel @Inject constructor(
     private val _state = MutableStateFlow(TaskListState())
     val state: StateFlow<TaskListState> = _state.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         loadTasks()
     }
 
     fun loadTasks() {
         viewModelScope.launch {
+            _isRefreshing.value = true
             _state.value = _state.value.copy(isLoading = true)
             taskRepository.getAllTasks().collect { tasks ->
                 _state.value = _state.value.copy(
@@ -42,6 +46,22 @@ class TaskViewModel @Inject constructor(
                     filteredTasks = filterTasks(tasks, _state.value.searchQuery, _state.value.selectedStatus),
                     isLoading = false
                 )
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    fun loadTasksForLead(leadId: String) {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            _state.value = _state.value.copy(isLoading = true)
+            taskRepository.getAllTasks().collect { tasks ->
+                _state.value = _state.value.copy(
+                    tasks = tasks,
+                    filteredTasks = filterTasks(tasks, _state.value.searchQuery, _state.value.selectedStatus),
+                    isLoading = false
+                )
+                _isRefreshing.value = false
             }
         }
     }

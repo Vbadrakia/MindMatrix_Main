@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.googleServices)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.composeCompiler)
     id("kotlin-kapt")
 }
 
@@ -44,6 +43,9 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -65,6 +67,7 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
 
@@ -101,6 +104,9 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+
+    // Vico Charts
+    implementation("com.patrykandpatrick.vico:compose-m3:1.15.0")
 
     // Testing
     testImplementation(libs.junit)

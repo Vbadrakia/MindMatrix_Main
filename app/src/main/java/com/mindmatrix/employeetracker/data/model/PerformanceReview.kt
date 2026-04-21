@@ -20,13 +20,33 @@ data class PerformanceReview(
     val attendanceScore: Int = 0,
     val communicationScore: Int = 0,
     val innovationScore: Int = 0,
-    val overallScore: Double = 0.0,
+    val rawScore: Double = 0.0,
+    val weightedScore: Double = 0.0,
     val status: ReviewStatus = ReviewStatus.APPROVED,
     val comments: String = "",
     val goals: String = "",
     val strengths: String = "",
     val areasForImprovement: String = ""
 ) {
+    /**
+     * Calculates raw and weighted scores based on performance metrics.
+     */
+    fun withCalculatedScores(): PerformanceReview {
+        val raw = (qualityScore + timelinessScore + attendanceScore + communicationScore + innovationScore).toDouble() / 5.0
+        
+        // quality * 0.30 + timeliness * 0.25 + attendance * 0.15 + communication * 0.15 + innovation * 0.15
+        val weighted = (qualityScore * 0.30) +
+                (timelinessScore * 0.25) +
+                (attendanceScore * 0.15) +
+                (communicationScore * 0.15) +
+                (innovationScore * 0.15)
+        
+        return this.copy(
+            rawScore = raw,
+            weightedScore = weighted
+        )
+    }
+
     fun toMap(): Map<String, Any?> = mapOf(
         "employeeId" to employeeId,
         "reviewerId" to reviewerId,
@@ -37,7 +57,8 @@ data class PerformanceReview(
         "attendanceScore" to attendanceScore,
         "communicationScore" to communicationScore,
         "innovationScore" to innovationScore,
-        "overallScore" to overallScore,
+        "rawScore" to rawScore,
+        "weightedScore" to weightedScore,
         "status" to status.name,
         "comments" to comments,
         "goals" to goals,
@@ -57,7 +78,8 @@ data class PerformanceReview(
             attendanceScore = (map["attendanceScore"] as? Number)?.toInt() ?: 0,
             communicationScore = (map["communicationScore"] as? Number)?.toInt() ?: 0,
             innovationScore = (map["innovationScore"] as? Number)?.toInt() ?: 0,
-            overallScore = (map["overallScore"] as? Number)?.toDouble() ?: 0.0,
+            rawScore = (map["rawScore"] as? Number)?.toDouble() ?: 0.0,
+            weightedScore = (map["weightedScore"] as? Number)?.toDouble() ?: 0.0,
             status = try {
                 ReviewStatus.valueOf(map["status"] as? String ?: "APPROVED")
             } catch (_: Exception) {

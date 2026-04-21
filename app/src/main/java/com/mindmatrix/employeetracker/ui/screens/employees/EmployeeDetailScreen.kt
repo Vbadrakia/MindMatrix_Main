@@ -28,6 +28,7 @@ import com.mindmatrix.employeetracker.viewmodel.PerformanceViewModel
 import com.mindmatrix.employeetracker.viewmodel.TaskViewModel
 import com.mindmatrix.employeetracker.viewmodel.AuthViewModel
 import com.mindmatrix.employeetracker.ui.components.AddPerformanceReviewDialog
+import com.mindmatrix.employeetracker.ui.screens.performance.PerformanceReviewCard
 
 @Composable
 fun EmployeeDetailScreen(
@@ -62,19 +63,19 @@ fun EmployeeDetailScreen(
         AddPerformanceReviewDialog(
             employeeName = employee.name,
             onDismiss = { showReviewDialog = false },
-            onSubmit = { productivity, quality, attendance, teamwork, softSkills, comments, period ->
-                val overall = (productivity + quality + attendance + teamwork + softSkills) / 5.0
+            onSubmit = { quality, timeliness, attendance, communication, innovation, comments, period, overall ->
                 val review = com.mindmatrix.employeetracker.data.model.PerformanceReview(
                     employeeId = employee.id,
                     reviewerId = currentUser?.id ?: "",
                     reviewDate = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date()),
                     period = period,
-                    productivityScore = productivity,
                     qualityScore = quality,
+                    timelinessScore = timeliness,
                     attendanceScore = attendance,
-                    teamworkScore = teamwork,
-                    softSkillsScore = softSkills,
-                    overallScore = overall,
+                    communicationScore = communication,
+                    innovationScore = innovation,
+                    rawScore = overall,
+                    weightedScore = overall, // Assuming equal weight for now as per dialog logic
                     comments = comments
                 )
                 performanceViewModel.addReview(review)
@@ -90,8 +91,11 @@ fun EmployeeDetailScreen(
                 onBackClick = onNavigateBack,
                 actions = {
                     if (isAdmin) {
-                        IconButton(onClick = { /* Edit logic */ }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
+                        IconButton(
+                            onClick = { /* Edit logic */ },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit employee profile")
                         }
                     }
                 }
@@ -164,7 +168,7 @@ fun EmployeeDetailScreen(
                                     Spacer(modifier = Modifier.height(24.dp))
                                     Button(
                                         onClick = { showReviewDialog = true },
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier.fillMaxWidth().height(48.dp),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
                                         Icon(Icons.Default.RateReview, contentDescription = null)
@@ -271,11 +275,50 @@ fun EmployeeDetailScreen(
                 // Recent tasks list
                 if (taskState.tasks.isEmpty()) {
                     item {
-                        EmptyStateCard(message = "No tasks assigned yet")
+                        EmptyStateCard(
+                            message = "No tasks assigned yet",
+                            icon = Icons.AutoMirrored.Filled.Assignment
+                        )
                     }
                 } else {
                     items(taskState.tasks.take(5)) { task ->
                         TaskSmallCard(task = task)
+                    }
+                }
+
+                // Performance Section Header
+                item {
+                    Text(
+                        text = "Performance Overview",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryDark,
+                        modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                    )
+                }
+
+                // Performance Chart
+                item {
+                    PerformanceTrendCard(
+                        reviews = performanceState.reviews,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Recent Reviews
+                if (performanceState.reviews.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Recent Reviews",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryDark,
+                            modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                        )
+                    }
+
+                    items(performanceState.reviews.take(3)) { review ->
+                        PerformanceReviewCard(review = review)
                     }
                 }
                 
@@ -285,6 +328,7 @@ fun EmployeeDetailScreen(
             }
         }
     }
+}
 }
 
 @Composable

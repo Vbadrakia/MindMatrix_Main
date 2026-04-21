@@ -31,6 +31,7 @@ import com.mindmatrix.employeetracker.ui.components.AddTaskDialog
 
 @Composable
 fun TaskListScreen(
+    onTaskClick: (String) -> Unit = {},
     taskViewModel: TaskViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel(),
     employeeViewModel: EmployeeViewModel = hiltViewModel()
@@ -44,6 +45,7 @@ fun TaskListScreen(
                      currentUser?.role == com.mindmatrix.employeetracker.data.model.UserRole.LEAD
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(authState.currentEmployee) {
         authState.currentEmployee?.let { employee ->
@@ -64,6 +66,18 @@ fun TaskListScreen(
                 taskViewModel.addTask(task)
                 showAddDialog = false
             }
+        )
+    }
+
+    if (taskToDelete != null) {
+        com.mindmatrix.employeetracker.ui.components.ConfirmationDialog(
+            title = "Delete Task",
+            message = "Are you sure you want to delete this task? This action cannot be undone.",
+            onConfirm = {
+                taskViewModel.deleteTask(taskToDelete!!)
+                taskToDelete = null
+            },
+            onDismiss = { taskToDelete = null }
         )
     }
 
@@ -177,11 +191,16 @@ fun TaskListScreen(
             if (state.isLoading) {
                 LoadingOverlay(isLoading = true)
             } else if (state.filteredTasks.isEmpty()) {
-                Box(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     EmptyState(
                         icon = Icons.Default.AssignmentLate,
-                        title = "No tasks found",
-                        subtitle = "Check back later for new assignments"
+                        title = if (state.searchQuery.isNotBlank()) "No matches found" else "No tasks assigned",
+                        subtitle = if (state.searchQuery.isNotBlank()) 
+                            "Try adjusting your search or filters to find what you're looking for." 
+                            else "Your task list is empty. Enjoy the breather or check back later!"
                     )
                 }
             } else {
@@ -191,7 +210,11 @@ fun TaskListScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(state.filteredTasks) { task ->
-                        TaskCard(task = task)
+                        TaskCard(
+                            task = task,
+                            onDelete = if (canAddTask) { { taskToDelete = task.id } } else null,
+                            onClick = { onTaskClick(task.id) }
+                        )
                     }
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -234,9 +257,15 @@ fun StatusFilterChip(
 }
 
 @Composable
-fun TaskCard(task: com.mindmatrix.employeetracker.data.model.Task) {
+fun TaskCard(
+    task: com.mindmatrix.employeetracker.data.model.Task,
+    onDelete: (() -> Unit)? = null,
+    onClick: () -> Unit = {}
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -265,6 +294,34 @@ fun TaskCard(task: com.mindmatrix.employeetracker.data.model.Task) {
                     color = getTaskStatusColor(task.status)
                 )
             }
+
+            if (task.status == TaskStatus.COMPLETED) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = Accent.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Accent.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PendingActions,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = Accent
+                        )
+                        Text(
+                            text = "Awaiting Review",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Accent,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
             
             if (task.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -289,41 +346,60 @@ fun TaskCard(task: com.mindmatrix.employeetracker.data.model.Task) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (task.dueDate.isNotBlank()) {
+                    val deadlineColor = getDeadlineColor(task.dueDate)
+                    val isWarning = deadlineColor != OnSurfaceVariant
+                    
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)
-                                .background(PrimaryContainer),
+                                .background(if (isWarning) deadlineColor.copy(alpha = 0.1f) else PrimaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Schedule,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
-                                tint = Primary
+                                tint = if (isWarning) deadlineColor else Primary
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Due: ${task.dueDate}",
                             style = MaterialTheme.typography.labelMedium,
-                            color = OnSurfaceVariant,
-                            fontWeight = FontWeight.Medium
+                            color = deadlineColor,
+                            fontWeight = if (isWarning) FontWeight.Bold else FontWeight.Medium
                         )
                     }
                 }
                 
-                IconButton(
-                    onClick = { /* Navigate to task detail */ },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "View Details",
-                        tint = Primary,
-                        modifier = Modifier.size(18.dp)
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete Task",
+                                tint = com.mindmatrix.employeetracker.ui.theme.Error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    
+                    IconButton(
+                        onClick = { /* Navigate to task detail */ },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "View Details",
+                            tint = Primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }

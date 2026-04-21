@@ -59,11 +59,11 @@ fun AddPerformanceReviewDialog(
 
                 HorizontalDivider()
 
-                ScoreSlider(label = "Quality of Work", score = quality, onScoreChange = { quality = it })
-                ScoreSlider(label = "Timeliness", score = timeliness, onScoreChange = { timeliness = it })
-                ScoreSlider(label = "Attendance", score = attendance, onScoreChange = { attendance = it })
-                ScoreSlider(label = "Communication", score = communication, onScoreChange = { communication = it })
-                ScoreSlider(label = "Innovation", score = innovation, onScoreChange = { innovation = it })
+                StarRatingItem(label = "Quality of Work", score = quality, onScoreChange = { quality = it })
+                StarRatingItem(label = "Timeliness", score = timeliness, onScoreChange = { timeliness = it })
+                StarRatingItem(label = "Attendance", score = attendance, onScoreChange = { attendance = it })
+                StarRatingItem(label = "Communication", score = communication, onScoreChange = { communication = it })
+                StarRatingItem(label = "Innovation", score = innovation, onScoreChange = { innovation = it })
 
                 HorizontalDivider()
 
@@ -128,24 +128,24 @@ fun AddPerformanceReviewDialog(
 }
 
 @Composable
-private fun ScoreSlider(
+private fun StarRatingItem(
     label: String,
     score: Int,
     onScoreChange: (Int) -> Unit
 ) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = label, style = MaterialTheme.typography.bodyMedium)
-            Text(text = "$score/5", fontWeight = FontWeight.Bold, color = Primary)
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(text = label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(text = "$score/5 rating", style = MaterialTheme.typography.labelSmall, color = Primary.copy(alpha = 0.7f))
         }
-        Slider(
-            value = score.toFloat(),
-            onValueChange = { onScoreChange(it.toInt()) },
-            valueRange = 1f..5f,
-            steps = 3
+        StarRatingWidget(
+            rating = score,
+            onRatingChange = onScoreChange,
+            starSize = 28.dp
         )
     }
 }

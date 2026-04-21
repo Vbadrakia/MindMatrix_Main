@@ -2,6 +2,7 @@ package com.mindmatrix.employeetracker.ui.screens.dashboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,26 +28,37 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mindmatrix.employeetracker.viewmodel.AttendanceViewModel
 import com.mindmatrix.employeetracker.viewmodel.AuthViewModel
 import com.mindmatrix.employeetracker.viewmodel.TaskViewModel
+import com.mindmatrix.employeetracker.viewmodel.InsightsViewModel
+import com.mindmatrix.employeetracker.viewmodel.PerformanceViewModel
+import com.mindmatrix.employeetracker.data.model.UserRole
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
 fun EmployeeDashboardScreen(
     onNavigateToTasks: () -> Unit = {},
     onNavigateToAttendance: () -> Unit = {},
+    onNavigateToTaskDetail: (String) -> Unit = {},
     authViewModel: AuthViewModel = hiltViewModel(),
     taskViewModel: TaskViewModel = hiltViewModel(),
-    attendanceViewModel: AttendanceViewModel = hiltViewModel()
+    attendanceViewModel: AttendanceViewModel = hiltViewModel(),
+    insightsViewModel: InsightsViewModel = hiltViewModel(),
+    performanceViewModel: PerformanceViewModel = hiltViewModel()
 ) {
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val taskState by taskViewModel.state.collectAsStateWithLifecycle()
+    val insightsState by insightsViewModel.state.collectAsStateWithLifecycle()
+    val performanceState by performanceViewModel.state.collectAsStateWithLifecycle()
+    
     val currentEmployee = authState.currentEmployee
     var selectedTab by remember { mutableIntStateOf(1) } // 0 for Tasks, 1 for Performance
-
-    // Optimize: Use derivedStateOf for computations that don't need to trigger recomposition on every change
-    val hasTasks = remember { derivedStateOf { taskState.tasks.isNotEmpty() } }
 
     LaunchedEffect(currentEmployee?.id) {
         currentEmployee?.let {
             taskViewModel.loadTasksForEmployee(it.id)
+            insightsViewModel.generateInsights(UserRole.EMPLOYEE, it.id)
+            performanceViewModel.loadReviewsForEmployee(it.id)
+            performanceViewModel.loadAverageScore(it.id)
         }
     }
 
@@ -72,8 +84,16 @@ fun EmployeeDashboardScreen(
                 ProfileHeaderCard(
                     name = currentEmployee?.name ?: "Sarah Jenkins",
                     designation = currentEmployee?.designation ?: "Senior Frontend Developer",
-                    department = currentEmployee?.department ?: "Design Systems Team"
+                    department = currentEmployee?.department ?: "Design Systems Team",
+                    onViewProfileClick = { currentEmployee?.let { onNavigateToTasks() } } // Or navigate to a specific profile view if available
                 )
+            }
+
+            // Insights Section
+            if (insightsState.insights.isNotEmpty()) {
+                item {
+                    InsightsCard(insights = insightsState.insights)
+                }
             }
 
             // Tabs
@@ -104,7 +124,7 @@ fun EmployeeDashboardScreen(
                                 lineHeight = 32.sp
                             )
                             Text(
-                                text = "Q3 2023 Performance Evaluation",
+                                text = "Latest Performance Evaluation",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = OnSurfaceVariant,
                                 fontWeight = FontWeight.Medium
@@ -112,7 +132,7 @@ fun EmployeeDashboardScreen(
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "4.8",
+                                text = String.format("%.1f", performanceState.averageScore),
                                 style = MaterialTheme.typography.displayMedium,
                                 fontWeight = FontWeight.Black,
                                 color = Primary
@@ -128,51 +148,69 @@ fun EmployeeDashboardScreen(
                     }
                 }
 
-                // Metric Cards
-                item {
-                    MetricCard(
-                        title = "Quality of Work",
-                        score = 5.0f,
-                        icon = Icons.Default.Diamond,
-                        description = "Consistently delivers bug-free, highly optimized React components. Code reviews are thorough and elevating for the entire team.",
-                        color = Success
-                    )
-                }
-                item {
-                    MetricCard(
-                        title = "Timeliness",
-                        score = 4.5f,
-                        icon = Icons.Default.Timer,
-                        description = "Meets sprint deadlines reliably. Showed exceptional time management during the Q2 product launch crunch.",
-                        color = Primary
-                    )
-                }
-                item {
-                    MetricCard(
-                        title = "Communication",
-                        score = 4.8f,
-                        icon = Icons.Default.ChatBubble,
-                        description = "Clear, concise async updates. Effectively bridges the gap between design and engineering teams.",
-                        color = Primary
-                    )
-                }
-                item {
-                    MetricCard(
-                        title = "Innovation",
-                        score = 4.9f,
-                        icon = Icons.Default.Lightbulb,
-                        description = "Spearheaded the migration to the new Tailwind architecture, reducing CSS bundle size by 40%.",
-                        color = Success
-                    )
+                // Metric Cards for the latest review
+                val latestReview = performanceState.reviews.maxByOrNull { it.reviewDate }
+                if (latestReview != null) {
+                    item {
+                        MetricCard(
+                            title = "Quality of Work",
+                            score = latestReview.qualityScore.toFloat(),
+                            icon = Icons.Default.Diamond,
+                            description = "Focus on code quality and attention to detail in your deliveries.",
+                            color = Success
+                        )
+                    }
+                    item {
+                        MetricCard(
+                            title = "Timeliness",
+                            score = latestReview.timelinessScore.toFloat(),
+                            icon = Icons.Default.Timer,
+                            description = "Meeting deadlines and sprint commitments reliably.",
+                            color = Primary
+                        )
+                    }
+                    item {
+                        MetricCard(
+                            title = "Communication",
+                            score = latestReview.communicationScore.toFloat(),
+                            icon = Icons.Default.ChatBubble,
+                            description = "Clarity in updates and effective collaboration with the team.",
+                            color = Primary
+                        )
+                    }
+                    item {
+                        MetricCard(
+                            title = "Innovation",
+                            score = latestReview.innovationScore.toFloat(),
+                            icon = Icons.Default.Lightbulb,
+                            description = "Bringing new ideas and optimizing existing workflows.",
+                            color = Success
+                        )
+                    }
+                } else {
+                    item {
+                        EmptyState(
+                            icon = Icons.Default.Assessment,
+                            title = "No reviews yet",
+                            subtitle = "Your performance metrics will appear here once your lead completes your first evaluation."
+                        )
+                    }
                 }
             } else {
                 if (taskState.tasks.isEmpty()) {
                     item {
-                        EmptyStateCard(message = "No tasks assigned to you yet")
+                        EmptyState(
+                            icon = Icons.Default.AssignmentLate,
+                            title = "All caught up!",
+                            subtitle = "You don't have any tasks assigned at the moment. Take a break or check in with your lead."
+                        )
                     }
                 } else {
                     items(taskState.tasks) { task ->
-                        TaskSmallCard(task = task)
+                        TaskSmallCard(
+                            task = task,
+                            onClick = { onNavigateToTaskDetail(task.id) }
+                        )
                     }
                 }
             }
@@ -184,7 +222,12 @@ fun EmployeeDashboardScreen(
 
 
 @Composable
-fun ProfileHeaderCard(name: String, designation: String, department: String) {
+fun ProfileHeaderCard(
+    name: String, 
+    designation: String, 
+    department: String,
+    onViewProfileClick: () -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -233,8 +276,8 @@ fun ProfileHeaderCard(name: String, designation: String, department: String) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { },
-                    modifier = Modifier.weight(1f),
+                    onClick = onViewProfileClick,
+                    modifier = Modifier.weight(1f).height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -324,7 +367,7 @@ fun TabItem(label: String, isSelected: Boolean, onClick: () -> Unit) {
 fun MetricCard(title: String, score: Float, icon: ImageVector, description: String, color: Color) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {

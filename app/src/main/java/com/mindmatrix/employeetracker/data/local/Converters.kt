@@ -33,4 +33,10 @@ class Converters {
 
     @TypeConverter
     fun toAttendanceStatus(status: String): AttendanceStatus = AttendanceStatus.valueOf(status)
+
+    @TypeConverter
+    fun fromStringList(list: List<String>): String = list.joinToString(",")
+
+    @TypeConverter
+    fun toStringList(data: String): List<String> = if (data.isBlank()) emptyList() else data.split(",")
 }

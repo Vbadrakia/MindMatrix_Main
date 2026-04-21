@@ -4,34 +4,33 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.Inbox
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.automirrored.filled.StarHalf
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.StarHalf
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindmatrix.employeetracker.data.model.AttendanceStatus
@@ -40,6 +39,26 @@ import com.mindmatrix.employeetracker.data.model.Task
 import com.mindmatrix.employeetracker.data.model.TaskPriority
 import com.mindmatrix.employeetracker.data.model.TaskStatus
 import com.mindmatrix.employeetracker.ui.theme.*
+import com.mindmatrix.employeetracker.viewmodel.Insight
+import com.mindmatrix.employeetracker.viewmodel.InsightPriority
+
+fun getDeadlineColor(dueDateStr: String): Color {
+    if (dueDateStr.isBlank()) return OnSurfaceVariant
+    try {
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault())
+        val dueDate = java.time.LocalDate.parse(dueDateStr, formatter)
+        val today = java.time.LocalDate.now()
+        val daysBetween = java.time.temporal.ChronoUnit.DAYS.between(today, dueDate)
+        
+        return when {
+            daysBetween < 0 -> Error // Overdue
+            daysBetween <= 3 -> Tertiary // Approaching
+            else -> OnSurfaceVariant
+        }
+    } catch (e: Exception) {
+        return OnSurfaceVariant
+    }
+}
 
 @Composable
 fun ShimmerItem(modifier: Modifier = Modifier) {
@@ -79,7 +98,8 @@ fun DashboardTopBar(
     title: String = "Performance",
     subtitle: String? = null,
     onBackClick: (() -> Unit)? = null,
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: (() -> Unit)? = null,
+    actions: (@Composable RowScope.() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -87,16 +107,18 @@ fun DashboardTopBar(
             .padding(horizontal = 4.dp, vertical = 8.dp)
     ) {
         if (onBackClick != null) {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.align(Alignment.CenterStart)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Primary
-                )
-            }
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Go back",
+                        tint = Primary
+                    )
+                }
         } else {
             Box(
                 modifier = Modifier
@@ -131,11 +153,21 @@ fun DashboardTopBar(
             }
         }
 
-        IconButton(
-            onClick = onNotificationClick,
-            modifier = Modifier.align(Alignment.CenterEnd)
+        Row(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Primary)
+            if (actions != null) {
+                actions()
+            }
+            if (onNotificationClick != null) {
+                IconButton(
+                    onClick = onNotificationClick,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(Icons.Default.Notifications, contentDescription = "View notifications", tint = Primary)
+                }
+            }
         }
     }
 }
@@ -181,10 +213,25 @@ fun StatCard(
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        label = "scale"
+    )
+
     Card(
         modifier = modifier
             .height(120.dp)
-            .clickable { onClick() },
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
         shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -200,7 +247,7 @@ fun StatCard(
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = null,
+                    contentDescription = "$title icon",
                     tint = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier.size(28.dp)
                 )
@@ -245,16 +292,72 @@ fun StatusChip(
 }
 
 @Composable
+fun EmptyStateCard(
+    message: String,
+    modifier: Modifier = Modifier,
+    icon: ImageVector = Icons.Default.Inbox
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = OnSurfaceVariant.copy(alpha = 0.5f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = OnSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
 fun TaskSmallCard(task: Task, onClick: () -> Unit = {}) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        label = "scale"
+    )
+    val elevation by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 4.dp,
+        label = "elevation"
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = rememberRipple(),
+                onClick = onClick
+            )
             .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        )
+            containerColor = Surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
         Row(
             modifier = Modifier
@@ -303,65 +406,54 @@ fun TaskSmallCard(task: Task, onClick: () -> Unit = {}) {
 }
 
 @Composable
-fun EmptyStateCard(message: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            Icons.Default.Inbox,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
 fun EmptyState(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(32.dp),
+            .padding(48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        Surface(
+            modifier = Modifier.size(120.dp),
+            shape = CircleShape,
+            color = Primary.copy(alpha = 0.05f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(56.dp),
+                    tint = Primary.copy(alpha = 0.3f)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            fontWeight = FontWeight.ExtraBold,
+            color = PrimaryDark,
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            color = OnSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
+        if (action != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+            action()
+        }
     }
 }
 
@@ -392,8 +484,9 @@ fun getAttendanceStatusColor(status: AttendanceStatus): Color {
 fun getTaskStatusColor(status: TaskStatus): Color {
     return when (status) {
         TaskStatus.COMPLETED -> Success
+        TaskStatus.REVIEWED -> Accent
         TaskStatus.IN_PROGRESS -> Tertiary
-        TaskStatus.PENDING -> OnSurfaceVariant
+        TaskStatus.PENDING -> Primary
         TaskStatus.OVERDUE -> Error
         TaskStatus.CANCELLED -> Outline
     }
@@ -416,10 +509,18 @@ fun AdminStatCard(
     trendColor: Color = StatusPresent,
     subtext: String? = null,
     isRating: Boolean = false,
+    rating: Int = 0,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = rememberRipple(),
+                onClick = onClick
+            ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -450,7 +551,12 @@ fun AdminStatCard(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, modifier = Modifier.size(12.dp), tint = trendColor)
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                contentDescription = "Trend up",
+                                modifier = Modifier.size(12.dp),
+                                tint = trendColor
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(text = trend, color = trendColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
@@ -472,8 +578,13 @@ fun AdminStatCard(
                 if (isRating) {
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         repeat(5) { index ->
+                            val starIcon = when {
+                                index < rating -> Icons.Default.Star
+                                index < rating + 1 && (rating % 1 != 0) -> Icons.AutoMirrored.Filled.StarHalf // Simplified check
+                                else -> Icons.Default.StarOutline
+                            }
                             Icon(
-                                imageVector = if (index < 4) Icons.Default.Star else Icons.AutoMirrored.Filled.StarHalf,
+                                imageVector = starIcon,
                                 contentDescription = null,
                                 tint = Primary,
                                 modifier = Modifier.size(20.dp)
@@ -488,8 +599,25 @@ fun AdminStatCard(
 
 @Composable
 fun TopPerformerCard(employee: Employee) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        label = "scale"
+    )
+
     Card(
-        modifier = Modifier.width(160.dp),
+        modifier = Modifier
+            .width(160.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = { /* Handle click */ }
+            ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -533,9 +661,30 @@ fun TopPerformerCard(employee: Employee) {
 }
 
 @Composable
-fun PerformanceTrendCard() {
+fun PerformanceTrendCard(
+    reviews: List<com.mindmatrix.employeetracker.data.model.PerformanceReview> = emptyList(),
+    onViewDetailedTrend: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    var selectedIndex by remember { mutableIntStateOf(-1) }
+    
+    // Process reviews into chart data (last 6 months or reviews)
+    val sortedReviews = reviews.sortedBy { it.reviewDate }.takeLast(6)
+    val data = sortedReviews.map { review ->
+        review.period.take(3) to (review.weightedScore.toFloat() / 5.0f) // Scale to 0-1
+    }.ifEmpty {
+        listOf(
+            "Jan" to 0.4f, "Feb" to 0.6f, "Mar" to 0.5f, "Apr" to 0.7f, 
+            "May" to 0.65f, "Jun" to 0.85f
+        )
+    }
+    
+    val scores = sortedReviews.map { (it.weightedScore * 20).toInt() }.ifEmpty {
+        listOf(72, 85, 78, 92, 88, 95)
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -546,35 +695,126 @@ fun PerformanceTrendCard() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Performance Trend",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryDark
-                )
-                Icon(Icons.Default.MoreHoriz, contentDescription = null, tint = OnSurfaceVariant)
+                Column {
+                    Text(
+                        text = "Performance Trend",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryDark
+                    )
+                    Text(
+                        text = "Avg. Monthly Growth: +12%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Success
+                    )
+                }
+                IconButton(onClick = onViewDetailedTrend) {
+                    Icon(
+                        imageVector = Icons.Default.Analytics, 
+                        contentDescription = "View detailed analytics",
+                        tint = Primary.copy(alpha = 0.7f)
+                    )
+                }
             }
+            
             Spacer(modifier = Modifier.height(24.dp))
+            
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp),
+                    .height(140.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                val heights = listOf(0.4f, 0.6f, 0.5f, 0.7f, 0.65f, 0.85f, 0.9f)
-                val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul")
-                heights.forEachIndexed { index, height ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                data.forEachIndexed { index, pair ->
+                    val isSelected = selectedIndex == index
+                    val barHeight by animateFloatAsState(
+                        targetValue = pair.second,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                        label = "barHeight"
+                    )
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                selectedIndex = if (selectedIndex == index) -1 else index
+                            }
+                    ) {
+                        AnimatedVisibility(
+                            visible = isSelected,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Text(
+                                text = "${scores[index]}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
+                            )
+                        }
+                        
                         Box(
                             modifier = Modifier
-                                .width(12.dp)
-                                .fillMaxHeight(height)
-                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                .background(Primary)
+                                .width(16.dp)
+                                .fillMaxHeight(barHeight)
+                                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                .background(
+                                    if (isSelected) Primary else Primary.copy(alpha = 0.3f)
+                                )
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = months[index], fontSize = 10.sp, color = OnSurfaceVariant)
+                        Text(
+                            text = pair.first,
+                            fontSize = 10.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) PrimaryDark else OnSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            AnimatedVisibility(
+                visible = selectedIndex != -1,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                if (selectedIndex != -1) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 20.dp)
+                            .background(PrimaryContainer.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "${data[selectedIndex].first} Breakdown",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryDark
+                            )
+                            Text(
+                                text = "Score: ${scores[selectedIndex]}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { scores[selectedIndex] / 100f },
+                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                            color = Primary,
+                            trackColor = Primary.copy(alpha = 0.1f)
+                        )
                     }
                 }
             }
@@ -583,7 +823,10 @@ fun PerformanceTrendCard() {
 }
 
 @Composable
-fun DepartmentScoresCard() {
+fun DepartmentScoresCard(
+    departmentAverages: List<com.mindmatrix.employeetracker.data.model.DepartmentAverage> = emptyList(),
+    onNavigateToReports: () -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -602,36 +845,278 @@ fun DepartmentScoresCard() {
                     fontWeight = FontWeight.Bold,
                     color = PrimaryDark
                 )
-                Icon(Icons.Default.FilterList, contentDescription = null, tint = Primary)
+                IconButton(onClick = onNavigateToReports) {
+                    Icon(
+                        imageVector = Icons.Default.FilterList,
+                        contentDescription = "View detailed reports",
+                        tint = Primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            val departments = listOf(
-                "Engineering" to 4.8f,
-                "Design" to 4.5f,
-                "Marketing" to 4.2f,
-                "Sales" to 3.9f
-            )
-            departments.forEach { (name, score) ->
+            
+            val displayData = departmentAverages.ifEmpty {
+                listOf(
+                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Engineering", 4.8),
+                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Design", 4.5),
+                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Marketing", 4.2),
+                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Sales", 3.9)
+                )
+            }
+
+            displayData.forEach { avg ->
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = name, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = PrimaryDark)
-                        Text(text = score.toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Primary)
+                        Text(text = avg.department, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = PrimaryDark)
+                        Text(text = String.format(java.util.Locale.getDefault(), "%.1f", avg.averageScore), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Primary)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    LinearProgressIndicator(
-                        progress = { score / 5f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(CircleShape),
-                        color = Primary,
-                        trackColor = SurfaceVariantDark
-                    )
+                    AnimatedProgressBar(progress = (avg.averageScore.toFloat() / 5f), color = Primary)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun WorkloadDistributionCard(
+    employees: List<Employee>,
+    tasks: List<Task>,
+    modifier: Modifier = Modifier
+) {
+    // Calculate tasks per employee
+    val workloadData = employees.map { employee ->
+        val taskCount = tasks.count { it.assignedTo == employee.id }
+        employee.name.split(" ").first() to taskCount
+    }.sortedByDescending { it.second }.take(5)
+
+    val maxTasks = workloadData.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Workload Distribution",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryDark
+                    )
+                    Text(
+                        text = "Active tasks per employee",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OnSurfaceVariant
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.PieChart,
+                    contentDescription = null,
+                    tint = Primary.copy(alpha = 0.7f)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            workloadData.forEach { (name, count) ->
+                Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryDark
+                        )
+                        Text(
+                            text = "$count tasks",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (count > 5) Error else Primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    
+                    val progress = count.toFloat() / maxTasks.toFloat()
+                    val barColor = when {
+                        count > 5 -> Error
+                        count > 3 -> Tertiary
+                        else -> Primary
+                    }
+                    
+                    AnimatedProgressBar(progress = progress, color = barColor)
+                }
+            }
+            
+            if (workloadData.isEmpty()) {
+                Text(
+                    text = "No active workload data available",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun InsightsCard(
+    insights: List<Insight>,
+    modifier: Modifier = Modifier
+) {
+    if (insights.isEmpty()) return
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Smart Insights",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = PrimaryDark,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            items(insights) { insight ->
+                val backgroundColor = when (insight.priority) {
+                    InsightPriority.POSITIVE -> Success.copy(alpha = 0.1f)
+                    InsightPriority.WARNING -> Error.copy(alpha = 0.1f)
+                    InsightPriority.NEUTRAL -> Primary.copy(alpha = 0.1f)
+                }
+                val contentColor = when (insight.priority) {
+                    InsightPriority.POSITIVE -> Success
+                    InsightPriority.WARNING -> Error
+                    InsightPriority.NEUTRAL -> Primary
+                }
+
+                Card(
+                    modifier = Modifier
+                        .width(280.dp)
+                        .height(110.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = backgroundColor),
+                    elevation = CardDefaults.cardElevation(0.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val icon = when (insight.priority) {
+                                InsightPriority.POSITIVE -> Icons.AutoMirrored.Filled.TrendingUp
+                                InsightPriority.WARNING -> Icons.Default.Notifications
+                                InsightPriority.NEUTRAL -> Icons.Default.Analytics
+                            }
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = contentColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = insight.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = contentColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = insight.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = contentColor.copy(alpha = 0.8f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AnimatedProgressBar(
+    progress: Float,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+        label = "progress"
+    )
+
+    LinearProgressIndicator(
+        progress = { animatedProgress },
+        modifier = modifier
+            .fillMaxWidth()
+            .height(8.dp)
+            .clip(CircleShape),
+        color = color,
+        trackColor = color.copy(alpha = 0.1f)
+    )
+}
+
+@Composable
+fun StarRatingWidget(
+    rating: Int,
+    onRatingChange: ((Int) -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    starSize: androidx.compose.ui.unit.Dp = 24.dp
+) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        for (i in 1..5) {
+            val isSelected = i <= rating
+            val icon = if (isSelected) Icons.Default.Star else Icons.Default.StarOutline
+            val tint = if (isSelected) Secondary else Outline
+            
+            // Modifier for interaction
+            var starModifier = Modifier.size(starSize)
+            if (onRatingChange != null) {
+                starModifier = starModifier.clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = androidx.compose.material.ripple.rememberRipple(bounded = false, radius = starSize / 1.5f),
+                    onClick = { onRatingChange(i) }
+                )
+            }
+            
+            Icon(
+                imageVector = icon,
+                contentDescription = "Star $i",
+                tint = tint,
+                modifier = starModifier
+            )
         }
     }
 }

@@ -52,10 +52,11 @@ fun MainApp(
 
     // Global Error Handling via Snackbar
     LaunchedEffect(authState.error) {
-        authState.error?.let {
+        val error = authState.error
+        if (error != null) {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    message = it,
+                    message = error,
                     duration = SnackbarDuration.Short,
                     withDismissAction = true
                 )
@@ -96,13 +97,14 @@ fun MainApp(
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 8.dp
                 ) {
-                    navItems.forEach { screen ->
+                    for (screen in navItems) {
                         val isSelected = currentRoute == screen.route
                         NavigationBarItem(
                             icon = {
-                                screen.icon?.let {
+                                val icon = screen.icon
+                                if (icon != null) {
                                     Icon(
-                                        imageVector = it,
+                                        imageVector = icon,
                                         contentDescription = screen.title,
                                         tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
