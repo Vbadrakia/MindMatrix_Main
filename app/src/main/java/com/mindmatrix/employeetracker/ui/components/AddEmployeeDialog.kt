@@ -9,8 +9,10 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mindmatrix.employeetracker.R
 import com.mindmatrix.employeetracker.data.model.Employee
 import com.mindmatrix.employeetracker.data.model.UserRole
 import com.mindmatrix.employeetracker.ui.theme.Primary
@@ -19,15 +21,18 @@ import java.util.UUID
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEmployeeDialog(
+    employeeToEdit: Employee? = null,
+    availableDepartments: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onSubmit: (Employee) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var designation by remember { mutableStateOf("") }
-    var department by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf(UserRole.EMPLOYEE) }
-    var phone by remember { mutableStateOf("") }
+    val isEditMode = employeeToEdit != null
+    var name by remember { mutableStateOf(employeeToEdit?.name ?: "") }
+    var email by remember { mutableStateOf(employeeToEdit?.email ?: "") }
+    var designation by remember { mutableStateOf(employeeToEdit?.designation ?: "") }
+    var department by remember { mutableStateOf(employeeToEdit?.department ?: "") }
+    var role by remember { mutableStateOf(employeeToEdit?.role ?: UserRole.EMPLOYEE) }
+    var phone by remember { mutableStateOf(employeeToEdit?.phone ?: "") }
     
     var roleExpanded by remember { mutableStateOf(false) }
 
@@ -35,7 +40,7 @@ fun AddEmployeeDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Add New Employee",
+                text = if (isEditMode) stringResource(R.string.edit_employee) else stringResource(R.string.add_employee),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -50,31 +55,57 @@ fun AddEmployeeDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Full Name") },
+                    label = { Text(stringResource(R.string.full_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email Address") },
+                    label = { Text(stringResource(R.string.email_address)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = designation,
                     onValueChange = { designation = it },
-                    label = { Text("Designation") },
+                    label = { Text(stringResource(R.string.designation)) },
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = department,
-                    onValueChange = { department = it },
-                    label = { Text("Department") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                var departmentExpanded by remember { mutableStateOf(false) }
+
+                ExposedDropdownMenuBox(
+                    expanded = departmentExpanded,
+                    onExpandedChange = { departmentExpanded = !departmentExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = department,
+                        onValueChange = { department = it },
+                        label = { Text(stringResource(R.string.department)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = departmentExpanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    if (availableDepartments.isNotEmpty()) {
+                        ExposedDropdownMenu(
+                            expanded = departmentExpanded,
+                            onDismissRequest = { departmentExpanded = false }
+                        ) {
+                            availableDepartments.forEach { dept ->
+                                DropdownMenuItem(
+                                    text = { Text(dept) },
+                                    onClick = {
+                                        department = dept
+                                        departmentExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text("Phone Number") },
+                    label = { Text(stringResource(R.string.phone_number)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 
@@ -86,7 +117,7 @@ fun AddEmployeeDialog(
                         value = role.name,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Role") },
+                        label = { Text(stringResource(R.string.role)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleExpanded) },
                         modifier = Modifier
                             .menuAnchor()
@@ -114,27 +145,29 @@ fun AddEmployeeDialog(
                 onClick = {
                     if (name.isNotBlank() && email.isNotBlank()) {
                         val newEmployee = Employee(
-                            id = UUID.randomUUID().toString(),
+                            id = employeeToEdit?.id ?: "",
                             name = name,
                             email = email,
                             designation = designation,
                             department = department,
                             role = role,
                             phone = phone,
-                            joinDate = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date()),
-                            isActive = true
+                            joinDate = employeeToEdit?.joinDate ?: java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date()),
+                            isActive = employeeToEdit?.isActive ?: true,
+                            profileImageUrl = employeeToEdit?.profileImageUrl ?: "",
+                            managerId = employeeToEdit?.managerId ?: ""
                         )
                         onSubmit(newEmployee)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Primary)
             ) {
-                Text("Add Employee")
+                Text(if (isEditMode) stringResource(R.string.save_changes) else stringResource(R.string.add_employee))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
         shape = RoundedCornerShape(24.dp)

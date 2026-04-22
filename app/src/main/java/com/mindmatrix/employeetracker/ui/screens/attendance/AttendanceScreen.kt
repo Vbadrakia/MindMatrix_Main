@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -22,6 +25,7 @@ import com.mindmatrix.employeetracker.ui.components.*
 import com.mindmatrix.employeetracker.ui.theme.*
 import com.mindmatrix.employeetracker.viewmodel.AttendanceViewModel
 import com.mindmatrix.employeetracker.viewmodel.AuthViewModel
+import com.mindmatrix.employeetracker.data.model.AttendanceStatus
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
@@ -49,8 +53,8 @@ fun AttendanceScreen(
     Scaffold(
         topBar = {
             DashboardTopBar(
-                title = "Attendance",
-                subtitle = "Manage your daily presence"
+                title = stringResource(R.string.attendance),
+                subtitle = stringResource(R.string.manage_presence)
             )
         },
         containerColor = Background
@@ -96,8 +100,17 @@ fun AttendanceScreen(
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
+                        val statusText = when (attendanceState.todayRecord?.status) {
+                            AttendanceStatus.PRESENT -> stringResource(R.string.you_are_checked_in)
+                            AttendanceStatus.LATE -> stringResource(R.string.checked_in_late)
+                            AttendanceStatus.HALF_DAY -> stringResource(R.string.half_day_marked)
+                            AttendanceStatus.LEAVE -> stringResource(R.string.on_leave_today)
+                            AttendanceStatus.ABSENT -> stringResource(R.string.marked_absent)
+                            else -> stringResource(R.string.not_checked_in)
+                        }
+                        
                         Text(
-                            text = if (attendanceState.isCheckedIn) "You're Checked In" else "Not Checked In",
+                            text = statusText,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = PrimaryDark
@@ -106,8 +119,8 @@ fun AttendanceScreen(
                         if (attendanceState.todayRecord != null) {
                             val record = attendanceState.todayRecord!!
                             Text(
-                                text = "Checked in at ${record.checkInTime}" +
-                                        if (record.checkOutTime.isNotBlank()) " • Out at ${record.checkOutTime}" else "",
+                                text = stringResource(R.string.checked_in_at, record.checkInTime) +
+                                        if (record.checkOutTime.isNotBlank()) " • " + stringResource(R.string.out_at, record.checkOutTime) else "",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = OnSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp)
@@ -141,10 +154,55 @@ fun AttendanceScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (attendanceState.isCheckedIn) "Check Out Now" else "Check In Now",
+                                text = if (attendanceState.isCheckedIn) stringResource(R.string.check_out_now) else stringResource(R.string.check_in_now),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Quick Status Options
+                        Text(
+                            text = stringResource(R.string.manual_status_hint),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = OnSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val statuses = listOf(
+                                AttendanceStatus.PRESENT,
+                                AttendanceStatus.HALF_DAY,
+                                AttendanceStatus.LEAVE,
+                                AttendanceStatus.ABSENT
+                            )
+
+                            statuses.forEach { status ->
+                                val isSelected = attendanceState.todayRecord?.status == status
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        currentEmployee?.let {
+                                            attendanceViewModel.markAttendanceStatus(it.id, status)
+                                        }
+                                    },
+                                    label = {
+                                        Text(
+                                            text = getLocalizedAttendanceStatus(status),
+                                            fontSize = 11.sp
+                                        )
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = getAttendanceStatusColor(status).copy(alpha = 0.2f),
+                                        selectedLabelColor = getAttendanceStatusColor(status)
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -155,19 +213,19 @@ fun AttendanceScreen(
                 item {
                     Column {
                         Text(
-                            text = "Monthly Summary",
+                            text = stringResource(R.string.monthly_summary),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = PrimaryDark,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            attendanceState.summary.take(3).forEach { statusCount ->
+                            attendanceState.summary.forEach { statusCount ->
                                 Card(
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.width(120.dp),
                                     shape = RoundedCornerShape(20.dp),
                                     colors = CardDefaults.cardColors(containerColor = Surface),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -183,11 +241,12 @@ fun AttendanceScreen(
                                             color = getAttendanceStatusColor(statusCount.status)
                                         )
                                         Text(
-                                            text = statusCount.status.name.lowercase(Locale.ROOT)
-                                                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
+                                            text = getLocalizedAttendanceStatus(statusCount.status),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Medium,
-                                            color = OnSurfaceVariant
+                                            color = OnSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
@@ -200,7 +259,7 @@ fun AttendanceScreen(
             // History
             item {
                 Text(
-                    text = "Recent History",
+                    text = stringResource(R.string.recent_history),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = PrimaryDark
@@ -211,8 +270,8 @@ fun AttendanceScreen(
                 item {
                     EmptyState(
                         icon = Icons.Default.EventBusy,
-                        title = "No attendance records",
-                        subtitle = "Your attendance history will appear here"
+                        title = stringResource(R.string.no_attendance_records),
+                        subtitle = stringResource(R.string.attendance_history_will_appear)
                     )
                 }
             } else {
@@ -262,12 +321,12 @@ fun AttendanceScreen(
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 StatusChip(
-                                    text = record.status.name.replace("_", " "),
+                                    text = getLocalizedAttendanceStatus(record.status),
                                     color = getAttendanceStatusColor(record.status)
                                 )
                                 if (record.hoursWorked > 0) {
                                     Text(
-                                        text = String.format("%.1fh worked", record.hoursWorked),
+                                        text = stringResource(R.string.hours_worked_format, record.hoursWorked),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = OnSurfaceVariant,
                                         modifier = Modifier.padding(top = 4.dp)

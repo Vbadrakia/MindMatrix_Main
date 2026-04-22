@@ -34,4 +34,22 @@ abstract class RepositoryModule {
     abstract fun bindPerformanceRepository(
         performanceRepository: PerformanceRepository
     ): IPerformanceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDepartmentRepository(
+        departmentRepository: DepartmentRepository
+    ): IDepartmentRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNotificationRepository(
+        notificationRepository: NotificationRepository
+    ): INotificationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDocumentRepository(
+        documentRepository: DocumentRepository
+    ): IDocumentRepository
 }

@@ -1,5 +1,6 @@
 package com.mindmatrix.employeetracker.data.repository
 
+import android.net.Uri
 import com.mindmatrix.employeetracker.data.model.Employee
 import kotlinx.coroutines.flow.Flow
 
@@ -13,4 +14,5 @@ interface IEmployeeRepository {
     suspend fun deleteEmployee(id: String): Result<Unit>
     suspend fun getEmployeeByEmail(email: String): Employee?
     suspend fun syncEmployees(): Result<Unit>
+    suspend fun uploadProfileImage(userId: String, imageUri: Uri): Result<String>
 }

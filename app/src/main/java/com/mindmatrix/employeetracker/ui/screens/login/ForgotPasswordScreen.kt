@@ -15,12 +15,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mindmatrix.employeetracker.R
 import com.mindmatrix.employeetracker.ui.theme.*
 import com.mindmatrix.employeetracker.viewmodel.AuthViewModel
 
@@ -33,6 +35,8 @@ fun ForgotPasswordScreen(
     var email by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<Pair<String, Boolean>?>(null) } // Text to show and isError
+    
+    val successMessage = stringResource(R.string.reset_link_sent)
 
     val isEmailValid = remember(email) {
         android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
@@ -46,7 +50,7 @@ fun ForgotPasswordScreen(
                 email = email.trim(),
                 onSuccess = {
                     isLoading = false
-                    message = "Reset link sent to your email!" to false
+                    message = successMessage to false
                 },
                 onError = { error ->
                     isLoading = false
@@ -59,10 +63,10 @@ fun ForgotPasswordScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Reset Password", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.reset_password), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -94,7 +98,7 @@ fun ForgotPasswordScreen(
             Spacer(modifier = Modifier.height(24.dp))
             
             Text(
-                text = "Forgot your password?",
+                text = stringResource(R.string.forgot_password_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = PrimaryDark,
@@ -104,7 +108,7 @@ fun ForgotPasswordScreen(
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
-                text = "Enter your email address and we'll send you a link to reset your password.",
+                text = stringResource(R.string.forgot_password_desc),
                 style = MaterialTheme.typography.bodyLarge,
                 color = OnSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -115,8 +119,8 @@ fun ForgotPasswordScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email Address") },
-                placeholder = { Text("example@company.com") },
+                label = { Text(stringResource(R.string.email_address)) },
+                placeholder = { Text(stringResource(R.string.email_placeholder)) },
                 leadingIcon = {
                     Icon(Icons.Default.Email, contentDescription = null, tint = Primary)
                 },
@@ -157,7 +161,7 @@ fun ForgotPasswordScreen(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 3.dp)
                 } else {
                     Text(
-                        text = "Send Reset Link",
+                        text = stringResource(R.string.send_reset_link),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )

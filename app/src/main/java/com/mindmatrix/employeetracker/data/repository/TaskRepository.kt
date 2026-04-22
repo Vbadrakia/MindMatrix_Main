@@ -7,6 +7,7 @@ import com.mindmatrix.employeetracker.data.model.TaskStatus
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -80,11 +81,18 @@ class TaskRepository @Inject constructor(
 
     override suspend fun syncTasks(): Result<Unit> = try {
         val snapshot = collection.get().await()
-        val tasks = snapshot.documents.map { doc ->
-            Task.fromMap(doc.id, doc.data ?: emptyMap())
+        val remoteTasks = snapshot.documents.map {
+            Task.fromMap(it.id, it.data ?: emptyMap())
         }
-        taskDao.deleteAllTasks()
-        taskDao.insertTasks(tasks)
+
+        val localTasks = taskDao.getAllTasks().first()
+
+        remoteTasks.forEach { remote ->
+            val local = localTasks.find { it.id == remote.id }
+            if (local == null || remote.lastUpdated > local.lastUpdated) {
+                taskDao.insertTask(remote)
+            }
+        }
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)

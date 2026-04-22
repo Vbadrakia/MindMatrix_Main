@@ -38,6 +38,7 @@ class TaskViewModel @Inject constructor(
 
     fun loadTasks() {
         viewModelScope.launch {
+            taskRepository.syncTasks()
             _isRefreshing.value = true
             _state.value = _state.value.copy(isLoading = true)
             taskRepository.getAllTasks().collect { tasks ->

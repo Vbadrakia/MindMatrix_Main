@@ -48,10 +48,10 @@ fun SettingsScreen(
 
     LaunchedEffect(seedSuccess, seedError) {
         if (seedSuccess == true) {
-            snackbarHostState.showSnackbar("Data seeded successfully!")
+            snackbarHostState.showSnackbar(context.getString(R.string.data_seed_success))
             settingsViewModel.clearStatus()
         } else if (seedError != null) {
-            snackbarHostState.showSnackbar("Error: $seedError")
+            snackbarHostState.showSnackbar(context.getString(R.string.error_prefix, seedError))
             settingsViewModel.clearStatus()
         }
     }
@@ -59,8 +59,8 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             DashboardTopBar(
-                title = "Settings",
-                subtitle = "App preferences & account"
+                title = stringResource(R.string.settings),
+                subtitle = stringResource(R.string.settings_subtitle)
             )
         },
         containerColor = Background,
@@ -69,15 +69,15 @@ fun SettingsScreen(
         if (showSignOutDialog) {
             AlertDialog(
                 onDismissRequest = { showSignOutDialog = false },
-                title = { Text("Sign Out", fontWeight = FontWeight.Bold) },
-                text = { Text("Are you sure you want to sign out of your account?") },
+                title = { Text(stringResource(R.string.sign_out), fontWeight = FontWeight.Bold) },
+                text = { Text(stringResource(R.string.sign_out_confirm)) },
                 confirmButton = {
                     TextButton(onClick = {
                         showSignOutDialog = false
                         onSignOut()
                         authViewModel.signOut()
                     }) {
-                        Text("Sign Out", color = Error, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.sign_out), color = Error, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
@@ -111,12 +111,12 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
                         EmployeeAvatar(
-                            name = currentEmployee?.name ?: "User",
+                            name = currentEmployee?.name ?: stringResource(R.string.user_default),
                             size = 64
                         )
                         Column {
                             Text(
-                                text = currentEmployee?.name ?: "User",
+                                text = currentEmployee?.name ?: stringResource(R.string.user_default),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = OnSurface
@@ -132,7 +132,11 @@ fun SettingsScreen(
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(
-                                    text = "${currentEmployee?.role?.name ?: ""} • ${currentEmployee?.department ?: ""}",
+                                    text = stringResource(
+                                        R.string.role_dept_format,
+                                        currentEmployee?.role?.name ?: "",
+                                        currentEmployee?.department ?: ""
+                                    ),
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
@@ -148,7 +152,7 @@ fun SettingsScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Account Settings",
+                        text = stringResource(R.string.account_settings),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryDark,
@@ -157,15 +161,15 @@ fun SettingsScreen(
                     
                     SettingsItem(
                         icon = Icons.Default.Person,
-                        title = "Profile Information",
-                        subtitle = "Name, email, and designation",
+                        title = stringResource(R.string.profile_info),
+                        subtitle = stringResource(R.string.profile_info_desc),
                         onClick = { onNavigateToProfile() }
                     )
 
                     SettingsItem(
                         icon = Icons.Default.Notifications,
-                        title = "Notifications",
-                        subtitle = "Alerts and message preferences",
+                        title = stringResource(R.string.notifications),
+                        subtitle = stringResource(R.string.notifications_settings_desc),
                         onClick = { onNavigateToNotifications() }
                     )
                 }
@@ -176,7 +180,7 @@ fun SettingsScreen(
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
-                            text = "Administrative",
+                            text = stringResource(R.string.administrative),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = PrimaryDark,
@@ -211,10 +215,10 @@ fun SettingsScreen(
                                     Icon(Icons.Default.Storage, contentDescription = null, tint = Warning)
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Database Maintenance", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.db_maintenance), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                                     Text(
-                                        if (isSeeding) "Seeding sample data..." 
-                                        else "Populate records for testing", 
+                                        if (isSeeding) stringResource(R.string.seeding_data) 
+                                        else stringResource(R.string.populate_records), 
                                         style = MaterialTheme.typography.bodySmall,
                                         color = OnSurfaceVariant
                                     )
@@ -237,7 +241,7 @@ fun SettingsScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "App Preferences",
+                        text = stringResource(R.string.app_preferences),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryDark,
@@ -246,15 +250,15 @@ fun SettingsScreen(
 
                     SettingsItem(
                         icon = Icons.Default.DarkMode,
-                        title = "Appearance",
-                        subtitle = "Dark mode and theme settings",
+                        title = stringResource(R.string.appearance),
+                        subtitle = stringResource(R.string.appearance_desc),
                         onClick = { onNavigateToAppearance() }
                     )
 
                     SettingsItem(
                         icon = Icons.Default.Info,
-                        title = "About",
-                        subtitle = "Version 1.2.0 • Build 42",
+                        title = stringResource(R.string.about),
+                        subtitle = stringResource(R.string.app_version_build),
                         onClick = { onNavigateToAbout() }
                     )
                 }
@@ -276,7 +280,7 @@ fun SettingsScreen(
                     Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Sign Out Account",
+                        text = stringResource(R.string.sign_out_account),
                         fontWeight = FontWeight.Bold
                     )
                 }

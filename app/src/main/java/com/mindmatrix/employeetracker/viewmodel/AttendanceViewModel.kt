@@ -92,6 +92,33 @@ class AttendanceViewModel @Inject constructor(
         }
     }
 
+    fun markAttendanceStatus(employeeId: String, status: AttendanceStatus) {
+        viewModelScope.launch {
+            val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val existingRecord = _state.value.todayRecord
+            
+            if (existingRecord != null) {
+                val updatedRecord = existingRecord.copy(status = status)
+                attendanceRepository.updateAttendance(updatedRecord).onSuccess {
+                    checkTodayAttendance(employeeId)
+                }.onFailure { e ->
+                    _state.value = _state.value.copy(error = e.message)
+                }
+            } else {
+                val record = AttendanceRecord(
+                    employeeId = employeeId,
+                    date = today,
+                    status = status
+                )
+                attendanceRepository.markAttendance(record).onSuccess {
+                    checkTodayAttendance(employeeId)
+                }.onFailure { e ->
+                    _state.value = _state.value.copy(error = e.message)
+                }
+            }
+        }
+    }
+
     fun loadAttendanceSummary(employeeId: String) {
         viewModelScope.launch {
             val summary = attendanceRepository.getAttendanceSummary(employeeId)

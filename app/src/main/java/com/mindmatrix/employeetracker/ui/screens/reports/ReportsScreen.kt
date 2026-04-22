@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,7 @@ import java.util.*
 @Composable
 fun ReportsScreen(
     onNavigateToLeaderboard: () -> Unit = {},
+    onNavigateToAnalytics: () -> Unit = {},
     authViewModel: AuthViewModel = hiltViewModel(),
     employeeViewModel: EmployeeViewModel = hiltViewModel(),
     taskViewModel: TaskViewModel = hiltViewModel(),
@@ -57,36 +59,50 @@ fun ReportsScreen(
     var selectedTimeRange by remember { mutableStateOf("Monthly") }
 
     LaunchedEffect(currentEmployee) {
-        if (isAdmin) {
+        if (isAdmin || currentEmployee?.role == UserRole.LEAD) {
             performanceViewModel.loadDepartmentAverages()
             performanceViewModel.loadLeaderboard()
+            performanceViewModel.loadAllReviews()
+        }
+    }
+
+    // Set default department for Lead
+    LaunchedEffect(currentEmployee) {
+        if (currentEmployee?.role == UserRole.LEAD && selectedDeptFilter == null) {
+            selectedDeptFilter = currentEmployee.department
         }
     }
 
     Scaffold(
         topBar = {
             DashboardTopBar(
-                title = "Reports & Analytics",
-                subtitle = if (isAdmin) "Organization-wide performance" else "Team Performance",
+                title = stringResource(R.string.reports_analytics),
+                subtitle = if (isAdmin) stringResource(R.string.org_wide_perf) else stringResource(R.string.team_perf),
                 onNotificationClick = { /* Handle notifications */ }
             )
         },
         floatingActionButton = {
-            if (isAdmin) {
+            if (isAdmin || isLead) {
                 FloatingActionButton(
                     onClick = {
                         val csvData = StringBuilder()
                         // Header
                         csvData.append("Employee ID,Employee Name,Department,Average Score,Rank,Category,Date\n")
                         
-                        performanceState.leaderboard.forEach { entry ->
+                        val leaderboardToExport = if (isAdmin) {
+                            performanceState.leaderboard
+                        } else {
+                            performanceState.leaderboard.filter { it.department == currentEmployee?.department }
+                        }
+
+                        leaderboardToExport.forEach { entry ->
                             val employee = employeeState.employees.find { it.name == entry.employeeName }
                             csvData.append("${employee?.id ?: "N/A"},")
                             csvData.append("${entry.employeeName},")
                             csvData.append("${entry.department},")
                             csvData.append("${String.format(Locale.getDefault(), "%.2f", entry.averageScore)},")
                             csvData.append("${entry.rank},")
-                            csvData.append("${selectedCategoryFilter ?: "Overall"},")
+                            csvData.append("${selectedCategoryFilter ?: stringResource(R.string.filter_overall)},")
                             csvData.append("${java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())}\n")
                         }
                         
@@ -99,7 +115,7 @@ fun ReportsScreen(
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            context.startActivity(Intent.createChooser(intent, "Export Report"))
+                            context.startActivity(Intent.createChooser(intent, context.getString(R.string.export_report)))
                         } catch (e: Exception) {
                             // Handle error
                         }
@@ -107,7 +123,7 @@ fun ReportsScreen(
                     containerColor = Primary,
                     contentColor = Color.White
                 ) {
-                    Icon(Icons.Default.Download, contentDescription = "Export CSV")
+                    Icon(Icons.Default.Download, contentDescription = stringResource(R.string.export_csv))
                 }
             }
         },
@@ -115,36 +131,60 @@ fun ReportsScreen(
     ) { padding ->
         if (!isAdmin && currentEmployee?.role != UserRole.LEAD) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("You do not have permission to view reports.")
+                Text(stringResource(R.string.no_permission_reports))
             }
         } else {
             Column(modifier = Modifier.padding(padding)) {
                 // Filters Row
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    // Department Filter
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item {
-                            FilterChip(
-                                selected = selectedDeptFilter == null,
-                                onClick = { selectedDeptFilter = null },
-                                label = { Text("All Depts") }
-                            )
+                    // Department Filter (Only for Admin)
+                    if (isAdmin) {
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item {
+                                FilterChip(
+                                    selected = selectedDeptFilter == null,
+                                    onClick = { selectedDeptFilter = null },
+                                    label = { Text(stringResource(R.string.all_depts)) }
+                                )
+                            }
+                            val depts = employeeState.employees.map { it.department }.distinct()
+                            items(depts) { dept ->
+                                FilterChip(
+                                    selected = selectedDeptFilter == dept,
+                                    onClick = { selectedDeptFilter = dept },
+                                    label = { Text(dept) }
+                                )
+                            }
                         }
-                        val depts = employeeState.employees.map { it.department }.distinct()
-                        items(depts) { dept ->
-                            FilterChip(
-                                selected = selectedDeptFilter == dept,
-                                onClick = { selectedDeptFilter = dept },
-                                label = { Text(dept) }
+                    } else {
+                        // For Lead, show their department name as a fixed label
+                        Surface(
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                            color = PrimaryContainer.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.department_label, currentEmployee?.department ?: ""),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
                             )
                         }
                     }
 
                     // Category Filter
-                    val categories = listOf("Overall", "Quality", "Timeliness", "Attendance", "Communication", "Innovation")
+                    val categories = listOf(
+                        stringResource(R.string.filter_overall),
+                        stringResource(R.string.filter_quality),
+                        stringResource(R.string.filter_timeliness),
+                        stringResource(R.string.filter_attendance),
+                        stringResource(R.string.filter_communication),
+                        stringResource(R.string.filter_innovation)
+                    )
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -162,7 +202,12 @@ fun ReportsScreen(
                     }
 
                     // Time Range Filter
-                    val timeRanges = listOf("Weekly", "Monthly", "Quarterly", "Yearly")
+                    val timeRanges = listOf(
+                        stringResource(R.string.filter_weekly),
+                        stringResource(R.string.filter_monthly),
+                        stringResource(R.string.filter_quarterly),
+                        stringResource(R.string.filter_yearly)
+                    )
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -208,14 +253,14 @@ fun ReportsScreen(
 
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 AdminStatCard(
-                                    label = if (isAdmin) "Total Staff" else "Team Members",
+                                    label = if (isAdmin) stringResource(R.string.total_staff) else stringResource(R.string.team_members),
                                     value = "${filteredEmployees.size}",
                                     trend = "+2",
                                     trendColor = Success,
                                     modifier = Modifier.weight(1f)
                                 )
                                 AdminStatCard(
-                                    label = "Completion",
+                                    label = stringResource(R.string.completion),
                                     value = "$completionRate%",
                                     trend = "+5%",
                                     trendColor = Success,
@@ -224,14 +269,29 @@ fun ReportsScreen(
                             }
 
                             AdminStatCard(
-                                label = "Active Projects",
+                                label = stringResource(R.string.active_projects),
                                 value = "${filteredTasks.size}",
                                 subtext = if (isAdmin) {
-                                    if (selectedDeptFilter == null) "Across ${performanceState.departmentAverages.size} Depts"
-                                    else "In $selectedDeptFilter"
-                                } else "In ${currentEmployee?.department}"
+                                    if (selectedDeptFilter == null) stringResource(R.string.across_depts, performanceState.departmentAverages.size)
+                                    else stringResource(R.string.in_dept, selectedDeptFilter!!)
+                                } else stringResource(R.string.in_dept, currentEmployee?.department ?: "")
                             )
                         }
+                    }
+
+                    // Monthly Performance Chart
+                    item {
+                        Text(
+                            text = stringResource(R.string.monthly_perf_trend),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryDark,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                        )
+                        PerformanceTrendCard(
+                            reviews = performanceState.reviews,
+                            onViewDetailedTrend = onNavigateToAnalytics
+                        )
                     }
 
                     // Only Admin can see organization-wide department averages and leaderboard
@@ -265,13 +325,13 @@ fun ReportsScreen(
                                         Spacer(modifier = Modifier.width(16.dp))
                                         Column {
                                             Text(
-                                                text = "Leaderboard",
+                                                text = stringResource(R.string.leaderboard_title),
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = PrimaryDark
                                             )
                                             Text(
-                                                text = "View top performers",
+                                                text = stringResource(R.string.view_top_performers),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = OnSurfaceVariant,
                                                 fontWeight = FontWeight.Medium
@@ -298,7 +358,7 @@ fun ReportsScreen(
                         if (displayDeptAverages.isNotEmpty()) {
                             item {
                                 Text(
-                                    text = "Department Performance",
+                                    text = stringResource(R.string.dept_performance),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = PrimaryDark,
@@ -328,7 +388,7 @@ fun ReportsScreen(
                                                 color = OnSurface
                                             )
                                             Text(
-                                                text = "${deptAvg.employeeCount} employees",
+                                                text = stringResource(R.string.employees_count_format, deptAvg.employeeCount),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = OnSurfaceVariant,
                                                 fontWeight = FontWeight.Medium
@@ -352,7 +412,7 @@ fun ReportsScreen(
                                                 color = PrimaryDark
                                             )
                                             Text(
-                                                text = "AVG SCORE",
+                                                text = stringResource(R.string.avg_score_label),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Bold,
                                                 color = OnSurfaceVariant
@@ -363,22 +423,115 @@ fun ReportsScreen(
                             }
                         }
                     } else if (currentEmployee?.role == UserRole.LEAD) {
-                        // Lead specific views if any, or just limited stats
+                        // Team Lead specific insights
+                        val teamDept = currentEmployee.department
+                        val teamAvg = performanceState.departmentAverages.find { it.department == teamDept }
+                        val teamLeaderboard = performanceState.leaderboard.filter { it.department == teamDept }
+
                         item {
-                            Text(
-                                text = "Team Insights",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryDark,
-                                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
-                            )
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.cardColors(containerColor = Surface),
-                            ) {
-                                Column(modifier = Modifier.padding(20.dp)) {
-                                    Text("Lead-specific team metrics would go here.")
+                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Text(
+                                    text = stringResource(R.string.team_perf_index),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryDark,
+                                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                                )
+                                
+                                teamAvg?.let { avg ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(24.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Surface),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(24.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = stringResource(R.string.average_score),
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = OnSurfaceVariant
+                                                )
+                                                Text(
+                                                    text = String.format(Locale.getDefault(), "%.1f", avg.averageScore),
+                                                    style = MaterialTheme.typography.displayMedium,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = if (avg.averageScore >= 80) Success else Primary
+                                                )
+                                            }
+                                            Box(
+                                                modifier = Modifier.size(80.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                CircularProgressIndicator(
+                                                    progress = { (avg.averageScore / 100f).toFloat() },
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    strokeWidth = 8.dp,
+                                                    color = if (avg.averageScore >= 80) Success else Primary,
+                                                    trackColor = Outline.copy(alpha = 0.2f),
+                                                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                                                )
+                                                Text(
+                                                    text = "${avg.averageScore.toInt()}%",
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (teamLeaderboard.isNotEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.top_performers_team),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryDark,
+                                        modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                                    )
+                                    
+                                    teamLeaderboard.take(3).forEach { entry ->
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(20.dp),
+                                            colors = CardDefaults.cardColors(containerColor = Surface)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(16.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "#${entry.rank}",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = if (entry.rank == 1) Warning else OnSurfaceVariant,
+                                                    modifier = Modifier.width(40.dp)
+                                                )
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = entry.employeeName,
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = stringResource(R.string.perf_score_format, entry.averageScore.toInt()),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = OnSurfaceVariant
+                                                    )
+                                                }
+                                                Icon(
+                                                    imageVector = Icons.Default.TrendingUp,
+                                                    contentDescription = null,
+                                                    tint = Success,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

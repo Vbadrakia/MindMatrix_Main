@@ -9,10 +9,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mindmatrix.employeetracker.R
 import com.mindmatrix.employeetracker.ui.theme.Primary
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun AddPerformanceReviewDialog(
@@ -20,23 +23,28 @@ fun AddPerformanceReviewDialog(
     onDismiss: () -> Unit,
     onSubmit: (Int, Int, Int, Int, Int, String, String, Double) -> Unit
 ) {
-    var quality by remember { mutableIntStateOf(3) }
-    var timeliness by remember { mutableIntStateOf(3) }
-    var attendance by remember { mutableIntStateOf(3) }
-    var communication by remember { mutableIntStateOf(3) }
-    var innovation by remember { mutableIntStateOf(3) }
+    var quality by remember { mutableFloatStateOf(80f) }
+    var productivity by remember { mutableFloatStateOf(80f) }
+    var attendance by remember { mutableFloatStateOf(80f) }
+    var softSkills by remember { mutableFloatStateOf(80f) }
+    var teamwork by remember { mutableFloatStateOf(80f) }
     var comments by remember { mutableStateOf("") }
-    var period by remember { mutableStateOf("Monthly Review") }
+    var period by remember { mutableStateOf("") }
+    
+    val defaultPeriod = stringResource(R.string.monthly_review)
+    LaunchedEffect(Unit) {
+        if (period.isEmpty()) period = defaultPeriod
+    }
 
-    val overallScore = remember(quality, timeliness, attendance, communication, innovation) {
-        (quality + timeliness + attendance + communication + innovation) / 5.0
+    val overallScore = remember(quality, productivity, attendance, softSkills, teamwork) {
+        (quality + productivity + attendance + softSkills + teamwork) / 5.0
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Performance Evaluation: $employeeName",
+                text = stringResource(R.string.evaluation_title_format, employeeName),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Primary
@@ -52,18 +60,18 @@ fun AddPerformanceReviewDialog(
                 OutlinedTextField(
                     value = period,
                     onValueChange = { period = it },
-                    label = { Text("Review Period") },
+                    label = { Text(stringResource(R.string.review_period)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
 
                 HorizontalDivider()
 
-                StarRatingItem(label = "Quality of Work", score = quality, onScoreChange = { quality = it })
-                StarRatingItem(label = "Timeliness", score = timeliness, onScoreChange = { timeliness = it })
-                StarRatingItem(label = "Attendance", score = attendance, onScoreChange = { attendance = it })
-                StarRatingItem(label = "Communication", score = communication, onScoreChange = { communication = it })
-                StarRatingItem(label = "Innovation", score = innovation, onScoreChange = { innovation = it })
+                ScoreSliderItem(label = stringResource(R.string.quality_of_work), score = quality, onScoreChange = { quality = it })
+                ScoreSliderItem(label = stringResource(R.string.productivity), score = productivity, onScoreChange = { productivity = it })
+                ScoreSliderItem(label = stringResource(R.string.attendance), score = attendance, onScoreChange = { attendance = it })
+                ScoreSliderItem(label = stringResource(R.string.soft_skills), score = softSkills, onScoreChange = { softSkills = it })
+                ScoreSliderItem(label = stringResource(R.string.teamwork), score = teamwork, onScoreChange = { teamwork = it })
 
                 HorizontalDivider()
 
@@ -80,12 +88,12 @@ fun AddPerformanceReviewDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Calculated Score:",
+                            stringResource(R.string.calculated_score),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = String.format(Locale.getDefault(), "%.1f / 5.0", overallScore),
+                            text = stringResource(R.string.score_format_with_total, overallScore),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Black,
                             color = Primary
@@ -96,7 +104,7 @@ fun AddPerformanceReviewDialog(
                 OutlinedTextField(
                     value = comments,
                     onValueChange = { comments = it },
-                    label = { Text("Remarks / Feedback") },
+                    label = { Text(stringResource(R.string.remarks_feedback)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     shape = RoundedCornerShape(12.dp)
@@ -106,13 +114,22 @@ fun AddPerformanceReviewDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSubmit(quality, timeliness, attendance, communication, innovation, comments, period, overallScore)
+                    onSubmit(
+                        quality.roundToInt(),
+                        productivity.roundToInt(),
+                        attendance.roundToInt(),
+                        softSkills.roundToInt(),
+                        teamwork.roundToInt(),
+                        comments,
+                        period,
+                        overallScore
+                    )
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Submit Evaluation", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.submit_evaluation), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -120,7 +137,7 @@ fun AddPerformanceReviewDialog(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
         shape = RoundedCornerShape(28.dp)
@@ -128,24 +145,29 @@ fun AddPerformanceReviewDialog(
 }
 
 @Composable
-private fun StarRatingItem(
+private fun ScoreSliderItem(
     label: String,
-    score: Int,
-    onScoreChange: (Int) -> Unit
+    score: Float,
+    onScoreChange: (Float) -> Unit
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.Center
     ) {
-        Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(text = label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            Text(text = "$score/5 rating", style = MaterialTheme.typography.labelSmall, color = Primary.copy(alpha = 0.7f))
+            Text(text = stringResource(R.string.score_label_with_total, score.roundToInt()), style = MaterialTheme.typography.labelMedium, color = Primary.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
         }
-        StarRatingWidget(
-            rating = score,
-            onRatingChange = onScoreChange,
-            starSize = 28.dp
+        Slider(
+            value = score,
+            onValueChange = onScoreChange,
+            valueRange = 0f..100f,
+            steps = 100,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

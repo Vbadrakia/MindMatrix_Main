@@ -42,12 +42,16 @@ fun AdminDashboardScreen(
     taskViewModel: TaskViewModel = hiltViewModel(),
     performanceViewModel: PerformanceViewModel = hiltViewModel(),
     insightsViewModel: InsightsViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = hiltViewModel()
+    departmentViewModel: com.mindmatrix.employeetracker.viewmodel.DepartmentViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel(),
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToDepartments: () -> Unit = {}
 ) {
     val employeeState by employeeViewModel.state.collectAsStateWithLifecycle()
     val taskState by taskViewModel.state.collectAsStateWithLifecycle()
     val performanceState by performanceViewModel.state.collectAsStateWithLifecycle()
     val insightsState by insightsViewModel.state.collectAsStateWithLifecycle()
+    val departmentState by departmentViewModel.state.collectAsStateWithLifecycle()
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
 
     LaunchedEffect(authState.currentEmployee) {
@@ -75,9 +79,9 @@ fun AdminDashboardScreen(
     Scaffold(
         topBar = {
             DashboardTopBar(
-                title = "Admin Dashboard",
-                subtitle = "Organization Overview",
-                onNotificationClick = { /* Handle notifications */ }
+                title = stringResource(R.string.admin_dashboard),
+                subtitle = stringResource(R.string.org_overview),
+                onNotificationClick = onNavigateToNotifications
             )
         },
         containerColor = Background
@@ -108,39 +112,60 @@ fun AdminDashboardScreen(
                 InsightsCard(insights = insightsState.insights)
             }
 
-            // Stat Cards Section
+            // Management Section
+            item {
+                Column {
+                    Text(
+                        text = stringResource(R.string.org_management),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryDark,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        AdminStatCard(
+                            label = stringResource(R.string.employees),
+                            value = employeeState.employees.size.toString(),
+                            trend = stringResource(R.string.manage_all),
+                            trendColor = Primary,
+                            onClick = onNavigateToEmployees,
+                            modifier = Modifier.weight(1f)
+                        )
+                        AdminStatCard(
+                            label = stringResource(R.string.departments),
+                            value = departmentState.departments.size.toString(),
+                            trend = stringResource(R.string.manage_all),
+                            trendColor = SecondaryDark,
+                            onClick = onNavigateToDepartments,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     AdminStatCard(
-                        label = "Employees",
-                        value = "${employeeState.employees.size}",
-                        trend = "+4%",
-                        trendColor = StatusPresent,
-                        onClick = onNavigateToEmployees,
-                        modifier = Modifier.weight(1f)
-                    )
-                    AdminStatCard(
-                        label = "Active Tasks",
-                        value = "${taskState.tasks.count { it.status != com.mindmatrix.employeetracker.data.model.TaskStatus.COMPLETED && it.status != com.mindmatrix.employeetracker.data.model.TaskStatus.REVIEWED }}",
-                        subtext = "${employeeState.employees.map { it.department }.distinct().size} teams",
+                        label = stringResource(R.string.active_tasks),
+                        value = taskState.tasks.count { it.status != com.mindmatrix.employeetracker.data.model.TaskStatus.COMPLETED && it.status != com.mindmatrix.employeetracker.data.model.TaskStatus.REVIEWED }.toString(),
+                        subtext = stringResource(R.string.across_all_teams),
                         onClick = onNavigateToTasks,
                         modifier = Modifier.weight(1f)
                     )
+                    AdminStatCard(
+                        label = stringResource(R.string.avg_performance),
+                        value = String.format(Locale.getDefault(), "%.1f", performanceState.averageScore),
+                        isRating = false,
+                        onClick = onNavigateToReports,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
-            }
-
-            item {
-                AdminStatCard(
-                    label = "Average Performance",
-                    value = String.format(Locale.getDefault(), "%.1f / 5.0", performanceState.averageScore),
-                    isRating = true,
-                    onClick = onNavigateToReports,
-                    modifier = Modifier.fillMaxWidth(),
-                    rating = performanceState.averageScore.toInt()
-                )
             }
 
             // Top Performers Section
@@ -152,21 +177,36 @@ fun AdminDashboardScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Top Performers",
+                            text = stringResource(R.string.top_performers),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = PrimaryDark
                         )
                         TextButton(onClick = onNavigateToEmployees) {
-                            Text("View All", color = Primary)
+                            Text(stringResource(R.string.view_all), color = Primary)
                         }
                     }
+                    val leaderboard = performanceState.leaderboard.take(5)
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(end = 24.dp)
                     ) {
-                        items(employeeState.employees.take(5)) { employee ->
-                            TopPerformerCard(employee)
+                        if (leaderboard.isNotEmpty()) {
+                            items(leaderboard) { entry ->
+                                TopPerformerCard(
+                                    name = entry.employeeName,
+                                    designation = entry.department,
+                                    score = entry.averageScore
+                                )
+                            }
+                        } else {
+                            items(employeeState.employees.take(5)) { employee ->
+                                TopPerformerCard(
+                                    name = employee.name,
+                                    designation = employee.designation,
+                                    score = 0.0
+                                )
+                            }
                         }
                     }
                 }

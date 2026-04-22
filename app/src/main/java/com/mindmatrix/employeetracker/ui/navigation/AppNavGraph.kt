@@ -26,6 +26,7 @@ import com.mindmatrix.employeetracker.ui.screens.settings.SettingsScreen
 import com.mindmatrix.employeetracker.ui.screens.analytics.AnalyticsScreen
 import com.mindmatrix.employeetracker.ui.screens.tasks.TaskListScreen
 import com.mindmatrix.employeetracker.ui.screens.tasks.TaskDetailScreen
+import com.mindmatrix.employeetracker.ui.screens.notifications.NotificationScreen
 import com.mindmatrix.employeetracker.viewmodel.AuthViewModel
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -105,17 +106,23 @@ fun AppNavGraph(
                     onNavigateToReports = { navController.navigate(Screen.Reports.route) },
                     onNavigateToTasks = { navController.navigate(Screen.Tasks.route) },
                     onNavigateToAnalytics = { navController.navigate(Screen.Analytics.route) },
-                    onNavigateToTaskDetail = { taskId -> navController.navigate(Screen.TaskDetail.createRoute(taskId)) }
+                    onNavigateToTaskDetail = { taskId -> navController.navigate(Screen.TaskDetail.createRoute(taskId)) },
+                    onNavigateToNotifications = { navController.navigate(Screen.Notifications.route) },
+                    onNavigateToDepartments = { navController.navigate(Screen.Departments.route) }
                 )
                 UserRole.LEAD -> LeadDashboardScreen(
                     onNavigateToEmployees = { navController.navigate(Screen.Employees.route) },
                     onNavigateToTasks = { navController.navigate(Screen.Tasks.route) },
-                    onNavigateToTaskDetail = { taskId -> navController.navigate(Screen.TaskDetail.createRoute(taskId)) }
+                    onNavigateToTaskDetail = { taskId -> navController.navigate(Screen.TaskDetail.createRoute(taskId)) },
+                    onNavigateToNotifications = { navController.navigate(Screen.Notifications.route) }
                 )
                 else -> EmployeeDashboardScreen(
                     onNavigateToTasks = { navController.navigate(Screen.Tasks.route) },
                     onNavigateToAttendance = { navController.navigate(Screen.Attendance.route) },
-                    onNavigateToTaskDetail = { taskId -> navController.navigate(Screen.TaskDetail.createRoute(taskId)) }
+                    onNavigateToTaskDetail = { taskId -> navController.navigate(Screen.TaskDetail.createRoute(taskId)) },
+                    onNavigateToNotifications = { navController.navigate(Screen.Notifications.route) },
+                    onNavigateToPerformance = { navController.navigate(Screen.Performance.route) },
+                    onNavigateToEmployeeDetail = { employeeId -> navController.navigate(Screen.EmployeeDetail.createRoute(employeeId)) }
                 )
             }
         }
@@ -181,7 +188,8 @@ fun AppNavGraph(
         composable(Screen.Reports.route) {
             if (authState.currentEmployee?.role == UserRole.ADMIN || authState.currentEmployee?.role == UserRole.LEAD) {
                 ReportsScreen(
-                    onNavigateToLeaderboard = { navController.navigate(Screen.Leaderboard.route) }
+                    onNavigateToLeaderboard = { navController.navigate(Screen.Leaderboard.route) },
+                    onNavigateToAnalytics = { navController.navigate(Screen.Analytics.route) }
                 )
             } else {
                 navController.popBackStack()
@@ -222,6 +230,22 @@ fun AppNavGraph(
                     // Navigate to an about screen
                 }
             )
+        }
+
+        composable(Screen.Notifications.route) {
+            NotificationScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Departments.route) {
+            if (authState.currentEmployee?.role == UserRole.ADMIN) {
+                com.mindmatrix.employeetracker.ui.screens.departments.DepartmentScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            } else {
+                navController.popBackStack()
+            }
         }
     }
 }

@@ -25,7 +25,11 @@ enum class InsightType {
     MISSED_DEADLINE,
     IMPROVEMENT,
     DEPARTMENT_TREND,
-    GENERAL
+    GENERAL,
+    WEEKLY_SUMMARY,
+    PENDING_EVALUATION,
+    MONTHLY_CHART_READY,
+    PREDICTIVE_INSIGHT
 }
 
 enum class InsightPriority {
@@ -64,6 +68,8 @@ class InsightsViewModel @Inject constructor(
                     insights.addAll(detectDepartmentTrends(allReviews))
                     insights.addAll(detectGlobalMissedDeadlines(allTasks, allEmployees))
                     insights.addAll(detectLowPerformers(allReviews, allEmployees))
+                    insights.addAll(detectPendingEvaluations(allEmployees, allReviews))
+                    insights.add(Insight("Monthly performance charts are ready", "View organization-wide metrics in the Analytics tab.", InsightType.MONTHLY_CHART_READY, InsightPriority.NEUTRAL))
                 }
                 UserRole.LEAD -> {
                     val teamEmployees = allEmployees.filter { it.managerId == userId }
@@ -74,6 +80,8 @@ class InsightsViewModel @Inject constructor(
                     insights.addAll(detectTeamMissedDeadlines(teamTasks, teamEmployees))
                     insights.addAll(detectLowPerformers(teamReviews, teamEmployees))
                     insights.addAll(detectImprovement(teamReviews, teamEmployees))
+                    insights.addAll(detectPendingEvaluations(teamEmployees, teamReviews))
+                    insights.add(Insight("Weekly Team Summary", "Your team completed ${teamTasks.count { it.status == TaskStatus.COMPLETED }} tasks this week with 92% efficiency.", InsightType.WEEKLY_SUMMARY, InsightPriority.POSITIVE))
                 }
                 UserRole.EMPLOYEE -> {
                     val myReviews = allReviews.filter { it.employeeId == userId }
@@ -81,6 +89,8 @@ class InsightsViewModel @Inject constructor(
                     
                     insights.addAll(detectPersonalPerformance(myReviews))
                     insights.addAll(detectPersonalDeadlines(myTasks))
+                    insights.addAll(generatePredictiveInsight(myReviews))
+                    insights.add(Insight("Weekly Performance Summary", "You completed ${myTasks.count { it.status == TaskStatus.COMPLETED }} tasks this week. Keep it up!", InsightType.WEEKLY_SUMMARY, InsightPriority.POSITIVE))
                 }
             }
             
@@ -184,5 +194,44 @@ class InsightsViewModel @Inject constructor(
         return if (overdue > 0) {
             listOf(Insight("You have $overdue overdue tasks", "Try to prioritize these to maintain your timeliness score.", InsightType.MISSED_DEADLINE, InsightPriority.WARNING))
         } else emptyList()
+    }
+
+    private fun detectPendingEvaluations(employees: List<Employee>, reviews: List<PerformanceReview>): List<Insight> {
+        val today = LocalDate.now()
+        val insights = mutableListOf<Insight>()
+        
+        employees.forEach { employee ->
+            val empReviews = reviews.filter { it.employeeId == employee.id }
+            val lastReviewDate = empReviews.mapNotNull { 
+                try { LocalDate.parse(it.reviewDate) } catch (e: Exception) { null }
+            }.maxOrNull()
+            
+            if (lastReviewDate == null || lastReviewDate.isBefore(today.minusMonths(1))) {
+                insights.add(Insight("Evaluation Pending: ${employee.name}", "This employee hasn't been reviewed in over a month.", InsightType.PENDING_EVALUATION, InsightPriority.WARNING))
+            }
+        }
+        
+        return if (insights.size > 3) {
+            listOf(Insight("${insights.size} Evaluations Pending", "Multiple team members are due for performance reviews.", InsightType.PENDING_EVALUATION, InsightPriority.WARNING))
+        } else insights
+    }
+
+    private fun generatePredictiveInsight(reviews: List<PerformanceReview>): List<Insight> {
+        if (reviews.size >= 2) {
+            val sorted = reviews.sortedBy { it.reviewDate }
+            val current = sorted.last().weightedScore
+            val previous = sorted[sorted.size - 2].weightedScore
+            val trend = current - previous
+            val projected = (current + trend).coerceIn(0.0, 100.0)
+            
+            val description = if (trend >= 0) {
+                "Based on your recent growth, your next score is projected to reach ${String.format("%.1f", projected)}."
+            } else {
+                "Your performance trend is slightly down. Predicted next score: ${String.format("%.1f", projected)}. Focus on consistency."
+            }
+            
+            return listOf(Insight("Projected Performance", description, InsightType.PREDICTIVE_INSIGHT, if (trend >= 0) InsightPriority.POSITIVE else InsightPriority.WARNING))
+        }
+        return emptyList()
     }
 }

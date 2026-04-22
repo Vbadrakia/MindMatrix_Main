@@ -63,61 +63,6 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _authState.value = _authState.value.copy(isLoading = true, error = null)
             val normalizedEmail = email.trim().lowercase()
-            
-            // Hardcoded credentials for development/testing
-            if ((normalizedEmail == "admin@mindmatrix.com" || normalizedEmail == "admin@example.com") && (password == "admin123" || password == "password123")) {
-                val adminEmployee = Employee(
-                    id = "admin_id",
-                    email = normalizedEmail,
-                    name = "Admin User",
-                    role = UserRole.ADMIN,
-                    department = "Management",
-                    designation = "System Administrator"
-                )
-                _authState.value = _authState.value.copy(
-                    isLoading = false,
-                    isLoggedIn = true,
-                    currentEmployee = adminEmployee,
-                    error = null
-                )
-                return@launch
-            }
-
-            if ((normalizedEmail == "lead@mindmatrix.com" || normalizedEmail == "lead@example.com") && (password == "lead123" || password == "password123")) {
-                val leadEmployee = Employee(
-                    id = "lead_id",
-                    email = normalizedEmail,
-                    name = "Team Lead",
-                    role = UserRole.LEAD,
-                    department = "Engineering",
-                    designation = "Senior Lead"
-                )
-                _authState.value = _authState.value.copy(
-                    isLoading = false,
-                    isLoggedIn = true,
-                    currentEmployee = leadEmployee,
-                    error = null
-                )
-                return@launch
-            }
-
-            if ((normalizedEmail == "employee@mindmatrix.com" || normalizedEmail == "employee@example.com") && (password == "employee123" || password == "password123")) {
-                val employee = Employee(
-                    id = "emp_id",
-                    email = normalizedEmail,
-                    name = "John Doe",
-                    role = UserRole.EMPLOYEE,
-                    department = "Engineering",
-                    designation = "Software Engineer"
-                )
-                _authState.value = _authState.value.copy(
-                    isLoading = false,
-                    isLoggedIn = true,
-                    currentEmployee = employee,
-                    error = null
-                )
-                return@launch
-            }
 
             try {
                 auth.signInWithEmailAndPassword(normalizedEmail, password)

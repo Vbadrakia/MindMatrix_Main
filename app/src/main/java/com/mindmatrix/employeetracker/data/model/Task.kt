@@ -25,7 +25,9 @@ data class Task(
     val createdAt: String = "",
     val completedAt: String = "",
     val comments: String = "",
-    val attachments: List<String> = emptyList()
+    val attachments: List<String> = emptyList(),
+    val isPersonalGoal: Boolean = false,
+    val lastUpdated: Long = System.currentTimeMillis()
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
         "title" to title,
@@ -38,7 +40,9 @@ data class Task(
         "createdAt" to createdAt,
         "completedAt" to completedAt,
         "comments" to comments,
-        "attachments" to attachments
+        "attachments" to attachments,
+        "isPersonalGoal" to isPersonalGoal,
+        "lastUpdated" to lastUpdated
     )
 
     companion object {
@@ -62,7 +66,9 @@ data class Task(
             createdAt = map["createdAt"] as? String ?: "",
             completedAt = map["completedAt"] as? String ?: "",
             comments = map["comments"] as? String ?: "",
-            attachments = @Suppress("UNCHECKED_CAST") (map["attachments"] as? List<String> ?: emptyList())
+            attachments = @Suppress("UNCHECKED_CAST") (map["attachments"] as? List<String> ?: emptyList()),
+            isPersonalGoal = map["isPersonalGoal"] as? Boolean ?: false,
+            lastUpdated = (map["lastUpdated"] as? Number)?.toLong() ?: System.currentTimeMillis()
         )
     }
 }

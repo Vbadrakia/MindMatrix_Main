@@ -23,6 +23,8 @@ import com.mindmatrix.employeetracker.data.model.UserRole
 import com.mindmatrix.employeetracker.ui.components.StatusChip
 import com.mindmatrix.employeetracker.ui.components.getTaskPriorityColor
 import com.mindmatrix.employeetracker.ui.components.getTaskStatusColor
+import com.mindmatrix.employeetracker.ui.components.getLocalizedTaskStatus
+import com.mindmatrix.employeetracker.ui.components.getLocalizedTaskPriority
 import com.mindmatrix.employeetracker.ui.theme.*
 import com.mindmatrix.employeetracker.viewmodel.AuthViewModel
 import com.mindmatrix.employeetracker.viewmodel.TaskViewModel
@@ -46,10 +48,10 @@ fun TaskDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Task Details", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.task_details), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -88,11 +90,11 @@ fun TaskDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             StatusChip(
-                                text = task.status.name.replace("_", " ").lowercase().replaceFirstChar { it.titlecase() },
+                                text = getLocalizedTaskStatus(task.status),
                                 color = getTaskStatusColor(task.status)
                             )
                             StatusChip(
-                                text = task.priority.name.lowercase().replaceFirstChar { it.titlecase() },
+                                text = getLocalizedTaskPriority(task.priority),
                                 color = getTaskPriorityColor(task.priority)
                             )
                         }
@@ -117,7 +119,7 @@ fun TaskDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Due: ${task.dueDate}",
+                                text = stringResource(R.string.due_date_format, task.dueDate),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = OnSurfaceVariant
                             )
@@ -128,7 +130,7 @@ fun TaskDetailScreen(
                 // Description
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Description",
+                        text = stringResource(R.string.description),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryDark
@@ -139,7 +141,7 @@ fun TaskDetailScreen(
                         colors = CardDefaults.cardColors(containerColor = Surface)
                     ) {
                         Text(
-                            text = task.description.ifBlank { "No description provided." },
+                            text = task.description.ifBlank { stringResource(R.string.no_description) },
                             modifier = Modifier.padding(16.dp),
                             style = MaterialTheme.typography.bodyLarge,
                             color = OnSurface
@@ -155,14 +157,14 @@ fun TaskDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Comments & Notes",
+                            text = stringResource(R.string.comments_notes),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = PrimaryDark
                         )
                         if (!isEditingComments) {
                             IconButton(onClick = { isEditingComments = true }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Comments", tint = Primary, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit_comments_desc), tint = Primary, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
@@ -172,7 +174,7 @@ fun TaskDetailScreen(
                             value = comments,
                             onValueChange = { comments = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Add progress notes or comments...") },
+                            placeholder = { Text(stringResource(R.string.add_comments_hint)) },
                             shape = RoundedCornerShape(16.dp),
                             minLines = 3,
                             colors = OutlinedTextFieldDefaults.colors(
@@ -189,7 +191,7 @@ fun TaskDetailScreen(
                                 comments = task.comments
                                 isEditingComments = false 
                             }) {
-                                Text("Cancel", color = OnSurfaceVariant)
+                                Text(stringResource(R.string.cancel), color = OnSurfaceVariant)
                             }
                             Button(
                                 onClick = {
@@ -198,7 +200,7 @@ fun TaskDetailScreen(
                                 },
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("Save")
+                                Text(stringResource(R.string.save))
                             }
                         }
                     } else {
@@ -208,7 +210,7 @@ fun TaskDetailScreen(
                             colors = CardDefaults.cardColors(containerColor = Surface)
                         ) {
                             Text(
-                                text = task.comments.ifBlank { "No comments yet." },
+                                text = task.comments.ifBlank { stringResource(R.string.no_comments) },
                                 modifier = Modifier.padding(16.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = OnSurface
@@ -220,7 +222,7 @@ fun TaskDetailScreen(
                 // Attachments (Simulated)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Attachments",
+                        text = stringResource(R.string.attachments),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryDark
@@ -233,7 +235,7 @@ fun TaskDetailScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             if (task.attachments.isEmpty()) {
                                 Text(
-                                    text = "No attachments.",
+                                    text = stringResource(R.string.no_attachments),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = OnSurfaceVariant
                                 )
@@ -260,7 +262,7 @@ fun TaskDetailScreen(
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Add Attachment")
+                                Text(stringResource(R.string.add_attachment))
                             }
                         }
                     }
@@ -280,7 +282,7 @@ fun TaskDetailScreen(
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Mark as Completed", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.mark_as_completed), fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -295,7 +297,7 @@ fun TaskDetailScreen(
                     ) {
                         Icon(Icons.Default.Verified, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Approve & Review", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.approve_and_review), fontWeight = FontWeight.Bold)
                     }
                 }
                 
@@ -310,7 +312,7 @@ fun TaskDetailScreen(
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Start Task", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.start_task), fontWeight = FontWeight.Bold)
                     }
                 }
             }

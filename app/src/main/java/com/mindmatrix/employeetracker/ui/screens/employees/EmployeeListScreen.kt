@@ -32,9 +32,11 @@ import com.mindmatrix.employeetracker.ui.components.AddEmployeeDialog
 fun EmployeeListScreen(
     onEmployeeClick: (String) -> Unit = {},
     employeeViewModel: EmployeeViewModel = hiltViewModel(),
+    departmentViewModel: com.mindmatrix.employeetracker.viewmodel.DepartmentViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by employeeViewModel.state.collectAsState()
+    val departmentState by departmentViewModel.state.collectAsState()
     val authState by authViewModel.authState.collectAsState()
     val isAdmin = authState.currentEmployee?.role == UserRole.ADMIN
 
@@ -47,6 +49,7 @@ fun EmployeeListScreen(
 
     if (showAddDialog) {
         AddEmployeeDialog(
+            availableDepartments = departmentState.departments.map { it.name }.distinct().sorted(),
             onDismiss = { showAddDialog = false },
             onSubmit = { employee ->
                 employeeViewModel.addEmployee(employee)
@@ -57,8 +60,8 @@ fun EmployeeListScreen(
 
     if (employeeToDelete != null) {
         com.mindmatrix.employeetracker.ui.components.ConfirmationDialog(
-            title = "Delete Employee",
-            message = "Are you sure you want to delete this employee? This action cannot be undone.",
+            title = stringResource(R.string.delete_employee),
+            message = stringResource(R.string.delete_employee_confirm),
             onConfirm = {
                 employeeViewModel.deleteEmployee(employeeToDelete!!)
                 employeeToDelete = null
@@ -67,11 +70,21 @@ fun EmployeeListScreen(
         )
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(state.error) {
+        state.error?.let {
+            snackbarHostState.showSnackbar(it)
+            employeeViewModel.clearError()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             DashboardTopBar(
-                title = "Team Directory",
-                subtitle = "Organization Personnel"
+                title = stringResource(R.string.team_directory),
+                subtitle = stringResource(R.string.org_personnel)
             )
         },
         floatingActionButton = {
@@ -82,7 +95,7 @@ fun EmployeeListScreen(
                     contentColor = Color.White,
                     shape = CircleShape
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Employee")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_employee_desc))
                 }
             }
         },
@@ -96,13 +109,13 @@ fun EmployeeListScreen(
             // Header
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = "Team Directory",
+                    text = stringResource(R.string.team_directory),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Black,
                     color = PrimaryDark
                 )
                 Text(
-                    text = "Manage and review department personnel.",
+                    text = stringResource(R.string.manage_review_personnel),
                     style = MaterialTheme.typography.bodyLarge,
                     color = OnSurfaceVariant,
                     fontWeight = FontWeight.Medium
@@ -118,8 +131,8 @@ fun EmployeeListScreen(
                     .padding(horizontal = 24.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .heightIn(min = 56.dp),
-                placeholder = { Text("Search by name or role...", color = OnSurfaceVariant.copy(alpha = 0.6f)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search icon", tint = Primary) },
+                placeholder = { Text(stringResource(R.string.search_hint), color = OnSurfaceVariant.copy(alpha = 0.6f)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_icon_desc), tint = Primary) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = SurfaceVariantDark,
                     unfocusedContainerColor = SurfaceVariantDark,
@@ -131,65 +144,66 @@ fun EmployeeListScreen(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Department Filters
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Department:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryDark,
-                    modifier = Modifier.padding(end = 12.dp)
-                )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(end = 24.dp)
+            
+            if (isAdmin) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    item {
-                        FilterChip(
-                            selected = state.selectedDepartment == null,
-                            onClick = { employeeViewModel.filterByDepartment(null) },
-                            label = { Text("All") },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Primary,
-                                selectedLabelColor = Color.White,
-                                containerColor = Surface,
-                                labelColor = OnSurfaceVariant
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
+                    Text(
+                        text = stringResource(R.string.department_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryDark,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(end = 24.dp)
+                    ) {
+                        item {
+                            FilterChip(
                                 selected = state.selectedDepartment == null,
-                                borderColor = Outline,
-                                selectedBorderColor = Primary
+                                onClick = { employeeViewModel.filterByDepartment(null) },
+                                label = { Text(stringResource(R.string.all)) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Primary,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = Surface,
+                                    labelColor = OnSurfaceVariant
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = state.selectedDepartment == null,
+                                    borderColor = Outline,
+                                    selectedBorderColor = Primary
+                                )
                             )
-                        )
-                    }
-                    val departments = state.employees.map { it.department }.distinct().sorted()
-                    items(departments) { dept ->
-                        FilterChip(
-                            selected = state.selectedDepartment == dept,
-                            onClick = { employeeViewModel.filterByDepartment(if (state.selectedDepartment == dept) null else dept) },
-                            label = { Text(dept) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Primary,
-                                selectedLabelColor = Color.White,
-                                containerColor = Surface,
-                                labelColor = OnSurfaceVariant
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
+                        }
+                        val departments = departmentState.departments.map { it.name }.distinct().sorted()
+                        items(departments) { dept ->
+                            FilterChip(
                                 selected = state.selectedDepartment == dept,
-                                borderColor = Outline,
-                                selectedBorderColor = Primary
+                                onClick = { employeeViewModel.filterByDepartment(if (state.selectedDepartment == dept) null else dept) },
+                                label = { Text(dept) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Primary,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = Surface,
+                                    labelColor = OnSurfaceVariant
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = state.selectedDepartment == dept,
+                                    borderColor = Outline,
+                                    selectedBorderColor = Primary
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -205,10 +219,10 @@ fun EmployeeListScreen(
                 ) {
                     EmptyState(
                         icon = Icons.Default.PeopleOutline,
-                        title = "No teammates found",
+                        title = stringResource(R.string.no_teammates_found),
                         subtitle = if (state.searchQuery.isNotBlank()) 
-                            "We couldn't find anyone matching \"${state.searchQuery}\"." 
-                            else "It looks like your team directory is currently empty."
+                            stringResource(R.string.no_teammates_matching, state.searchQuery) 
+                            else stringResource(R.string.team_directory_empty)
                     )
                 }
             } else {
@@ -264,7 +278,7 @@ fun EmployeeDirectoryCard(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = if (employee.isActive) "ACTIVE" else "ON LEAVE",
+                            text = if (employee.isActive) stringResource(R.string.active) else stringResource(R.string.on_leave),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -313,7 +327,7 @@ fun EmployeeDirectoryCard(
                         shape = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues(0.dp)
                     ) {
-                        Text("View Profile", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.view_profile), fontWeight = FontWeight.Bold)
                     }
                     
                     if (onDelete != null) {
@@ -328,7 +342,7 @@ fun EmployeeDirectoryCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete ${employee.name}"
+                                contentDescription = stringResource(R.string.delete_target, employee.name)
                             )
                         }
                     }

@@ -41,7 +41,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainApp(
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = hiltViewModel(),
+    notificationViewModel: com.mindmatrix.employeetracker.viewmodel.NotificationViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
@@ -49,6 +50,31 @@ fun MainApp(
     val currentRoute = navBackStackEntry?.destination?.route
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Notification Simulation (Observe new notifications)
+    val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
+    
+    LaunchedEffect(authState.currentEmployee) {
+        authState.currentEmployee?.let { emp ->
+            notificationViewModel.loadNotifications(emp.id)
+        }
+    }
+
+    LaunchedEffect(notificationState.notifications) {
+        val unread = notificationState.notifications.filter { !it.isRead }
+        if (unread.isNotEmpty()) {
+            val latest = unread.first()
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "New Message: ${latest.title}",
+                    actionLabel = "View",
+                    duration = SnackbarDuration.Long
+                )
+            }
+            // Mark as read so it doesn't pop up again
+            notificationViewModel.markAsRead(latest.id)
+        }
+    }
 
     // Global Error Handling via Snackbar
     LaunchedEffect(authState.error) {

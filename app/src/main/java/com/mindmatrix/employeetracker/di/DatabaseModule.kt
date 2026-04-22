@@ -47,4 +47,9 @@ object DatabaseModule {
     fun provideAttendanceDao(database: AppDatabase): AttendanceDao {
         return database.attendanceDao()
     }
+
+    @Provides
+    fun provideDepartmentDao(database: AppDatabase): com.mindmatrix.employeetracker.data.local.dao.DepartmentDao {
+        return database.departmentDao()
+    }
 }

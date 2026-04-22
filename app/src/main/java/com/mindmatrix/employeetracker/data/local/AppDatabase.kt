@@ -17,9 +17,11 @@ import com.mindmatrix.employeetracker.data.model.Task
         Employee::class,
         Task::class,
         PerformanceReview::class,
-        AttendanceRecord::class
+        AttendanceRecord::class,
+        com.mindmatrix.employeetracker.data.model.Department::class,
+        com.mindmatrix.employeetracker.data.model.Document::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -28,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun performanceDao(): PerformanceDao
     abstract fun attendanceDao(): AttendanceDao
+    abstract fun departmentDao(): com.mindmatrix.employeetracker.data.local.dao.DepartmentDao
+    abstract fun documentDao(): com.mindmatrix.employeetracker.data.local.dao.DocumentDao
 
     companion object {
         const val DATABASE_NAME = "employee_tracker_db"

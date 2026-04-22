@@ -23,6 +23,12 @@ class EmployeeViewModel @Inject constructor(
     private val employeeRepository: IEmployeeRepository
 ) : ViewModel() {
 
+    init {
+        viewModelScope.launch {
+            employeeRepository.syncEmployees()
+        }
+    }
+
     private val _searchQuery = MutableStateFlow("")
     private val _selectedDepartment = MutableStateFlow<String?>(null)
     private val _error = MutableStateFlow<String?>(null)
@@ -117,6 +123,15 @@ class EmployeeViewModel @Inject constructor(
     fun deleteEmployee(id: String) {
         viewModelScope.launch {
             val result = employeeRepository.deleteEmployee(id)
+            result.onFailure { e ->
+                _error.value = e.message
+            }
+        }
+    }
+
+    fun uploadProfileImage(userId: String, imageUri: android.net.Uri) {
+        viewModelScope.launch {
+            val result = employeeRepository.uploadProfileImage(userId, imageUri)
             result.onFailure { e ->
                 _error.value = e.message
             }

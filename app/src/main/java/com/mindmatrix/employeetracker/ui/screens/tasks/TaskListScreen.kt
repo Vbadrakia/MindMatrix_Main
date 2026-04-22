@@ -71,8 +71,8 @@ fun TaskListScreen(
 
     if (taskToDelete != null) {
         com.mindmatrix.employeetracker.ui.components.ConfirmationDialog(
-            title = "Delete Task",
-            message = "Are you sure you want to delete this task? This action cannot be undone.",
+            title = stringResource(R.string.delete_task_title),
+            message = stringResource(R.string.delete_task_confirm),
             onConfirm = {
                 taskViewModel.deleteTask(taskToDelete!!)
                 taskToDelete = null
@@ -84,8 +84,8 @@ fun TaskListScreen(
     Scaffold(
         topBar = {
             DashboardTopBar(
-                title = "Tasks",
-                subtitle = "${state.filteredTasks.size} assignments",
+                title = stringResource(R.string.tasks),
+                subtitle = stringResource(R.string.assignments_count, state.filteredTasks.size),
                 onNotificationClick = { /* Handle notifications */ }
             )
         },
@@ -97,7 +97,7 @@ fun TaskListScreen(
                     contentColor = Color.White,
                     shape = CircleShape
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Task")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_task_desc))
                 }
             }
         },
@@ -121,7 +121,7 @@ fun TaskListScreen(
                         .fillMaxWidth(),
                     placeholder = { 
                         Text(
-                            "Search tasks...", 
+                            stringResource(R.string.search_tasks_hint), 
                             style = MaterialTheme.typography.bodyLarge,
                             color = OnSurfaceVariant.copy(alpha = 0.6f) 
                         ) 
@@ -138,7 +138,7 @@ fun TaskListScreen(
                             IconButton(onClick = { taskViewModel.searchTasks("") }) {
                                 Icon(
                                     Icons.Default.Close, 
-                                    contentDescription = "Clear", 
+                                    contentDescription = stringResource(R.string.clear), 
                                     tint = OnSurfaceVariant
                                 )
                             }
@@ -172,7 +172,7 @@ fun TaskListScreen(
                     StatusFilterChip(
                         selected = state.selectedStatus == null,
                         onClick = { taskViewModel.filterByStatus(null) },
-                        label = "All"
+                        label = stringResource(R.string.all)
                     )
                 }
                 items(TaskStatus.entries) { status ->
@@ -183,7 +183,7 @@ fun TaskListScreen(
                                 if (state.selectedStatus == status) null else status
                             )
                         },
-                        label = status.name.replace("_", " ").lowercase().replaceFirstChar { it.titlecase() }
+                        label = getLocalizedTaskStatus(status)
                     )
                 }
             }
@@ -197,10 +197,10 @@ fun TaskListScreen(
                 ) {
                     EmptyState(
                         icon = Icons.Default.AssignmentLate,
-                        title = if (state.searchQuery.isNotBlank()) "No matches found" else "No tasks assigned",
+                        title = if (state.searchQuery.isNotBlank()) stringResource(R.string.no_matches_found) else stringResource(R.string.no_tasks_assigned),
                         subtitle = if (state.searchQuery.isNotBlank()) 
-                            "Try adjusting your search or filters to find what you're looking for." 
-                            else "Your task list is empty. Enjoy the breather or check back later!"
+                            stringResource(R.string.search_no_results_desc) 
+                            else stringResource(R.string.task_list_empty_desc)
                     )
                 }
             } else {
@@ -277,20 +277,37 @@ fun TaskCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = OnSurface
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = task.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                        )
+                        if (task.isPersonalGoal) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                color = Secondary.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.personal),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Secondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     StatusChip(
-                        text = task.priority.name.lowercase().replaceFirstChar { it.titlecase() },
+                        text = getLocalizedTaskPriority(task.priority),
                         color = getTaskPriorityColor(task.priority)
                     )
                 }
                 StatusChip(
-                    text = task.status.name.replace("_", " ").lowercase().replaceFirstChar { it.titlecase() },
+                    text = getLocalizedTaskStatus(task.status),
                     color = getTaskStatusColor(task.status)
                 )
             }
@@ -314,7 +331,7 @@ fun TaskCard(
                             tint = Accent
                         )
                         Text(
-                            text = "Awaiting Review",
+                            text = stringResource(R.string.awaiting_review),
                             style = MaterialTheme.typography.labelSmall,
                             color = Accent,
                             fontWeight = FontWeight.Bold
@@ -366,7 +383,7 @@ fun TaskCard(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Due: ${task.dueDate}",
+                            text = stringResource(R.string.due_date_format, task.dueDate),
                             style = MaterialTheme.typography.labelMedium,
                             color = deadlineColor,
                             fontWeight = if (isWarning) FontWeight.Bold else FontWeight.Medium
@@ -382,7 +399,7 @@ fun TaskCard(
                         ) {
                             Icon(
                                 Icons.Default.Delete,
-                                contentDescription = "Delete Task",
+                                contentDescription = stringResource(R.string.delete_task_title),
                                 tint = com.mindmatrix.employeetracker.ui.theme.Error,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -395,7 +412,7 @@ fun TaskCard(
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "View Details",
+                            contentDescription = stringResource(R.string.view_details_desc),
                             tint = Primary,
                             modifier = Modifier.size(18.dp)
                         )

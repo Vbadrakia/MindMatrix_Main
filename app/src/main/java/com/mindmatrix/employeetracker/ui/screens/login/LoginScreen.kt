@@ -101,7 +101,7 @@ fun LoginScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Analytics,
-                    contentDescription = "Employee Tracker Logo",
+                    contentDescription = stringResource(R.string.logo_desc),
                     modifier = Modifier.size(50.dp),
                     tint = Color.White
                 )
@@ -110,7 +110,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(32.dp))
             
             Text(
-                text = "Employee Tracker",
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 color = PrimaryDark,
                 fontWeight = FontWeight.Black,
@@ -118,7 +118,7 @@ fun LoginScreen(
             )
             
             Text(
-                text = "Performance Management Suite",
+                text = stringResource(R.string.performance_suite),
                 style = MaterialTheme.typography.bodyLarge,
                 color = OnSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -138,13 +138,13 @@ fun LoginScreen(
                     modifier = Modifier.padding(28.dp)
                 ) {
                     Text(
-                        text = "Welcome Back",
+                        text = stringResource(R.string.welcome_back),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryDark
                     )
                     Text(
-                        text = "Sign in to continue your journey",
+                        text = stringResource(R.string.sign_in_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = OnSurfaceVariant
                     )
@@ -152,7 +152,7 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     Text(
-                        text = "Email Address",
+                        text = stringResource(R.string.email_label),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = Primary,
@@ -162,7 +162,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        placeholder = { Text("Enter your email", color = OnSurfaceVariant.copy(alpha = 0.5f)) },
+                        placeholder = { Text(stringResource(R.string.email_hint), color = OnSurfaceVariant.copy(alpha = 0.5f)) },
                         leadingIcon = {
                             Icon(Icons.Default.Email, contentDescription = "Email Icon", tint = Primary)
                         },
@@ -190,7 +190,7 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Text(
-                        text = "Password",
+                        text = stringResource(R.string.password_label),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = Primary,
@@ -200,7 +200,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        placeholder = { Text("Enter your password", color = OnSurfaceVariant.copy(alpha = 0.5f)) },
+                        placeholder = { Text(stringResource(R.string.password_hint_login), color = OnSurfaceVariant.copy(alpha = 0.5f)) },
                         leadingIcon = {
                             Icon(Icons.Default.Lock, contentDescription = "Password Icon", tint = Primary)
                         },
@@ -209,7 +209,7 @@ fun LoginScreen(
                                 Icon(
                                     if (passwordVisible) Icons.Default.VisibilityOff
                                     else Icons.Default.Visibility,
-                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                    contentDescription = if (passwordVisible) stringResource(R.string.hide_password) else stringResource(R.string.show_password),
                                     tint = Primary
                                 )
                             }
@@ -260,7 +260,7 @@ fun LoginScreen(
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 3.dp)
                         } else {
                             Text(
-                                text = "Sign In",
+                                text = stringResource(R.string.sign_in),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold
                             )
@@ -290,7 +290,7 @@ fun LoginScreen(
             
             TextButton(onClick = onForgotPassword) {
                 Text(
-                    text = "Forgot Password?",
+                    text = stringResource(R.string.forgot_password),
                     color = Primary,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold

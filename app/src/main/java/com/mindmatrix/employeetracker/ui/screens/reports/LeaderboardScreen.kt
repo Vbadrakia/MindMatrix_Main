@@ -40,8 +40,8 @@ fun LeaderboardScreen(
     Scaffold(
         topBar = {
             DashboardTopBar(
-                title = "Top Performers",
-                subtitle = "Employee Leaderboard",
+                title = stringResource(R.string.top_performers),
+                subtitle = stringResource(R.string.employee_leaderboard),
                 onBackClick = onNavigateBack
             )
         },
@@ -52,8 +52,8 @@ fun LeaderboardScreen(
         } else if (state.leaderboard.isEmpty()) {
             EmptyState(
                 icon = Icons.Default.Leaderboard,
-                title = "No rankings yet",
-                subtitle = "Performance reviews are needed to generate rankings",
+                title = stringResource(R.string.no_rankings_yet),
+                subtitle = stringResource(R.string.rankings_needed_desc),
                 modifier = Modifier.padding(padding)
             )
         } else {
@@ -104,7 +104,7 @@ fun LeaderboardScreen(
 
                 item {
                     Text(
-                        text = "Overall Rankings",
+                        text = stringResource(R.string.overall_rankings),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -150,7 +150,7 @@ fun LeaderboardScreen(
 
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = String.format("%.1f", entry.averageScore),
+                                    text = stringResource(R.string.score_format, entry.averageScore),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
                                     color = PrimaryDark
@@ -214,7 +214,7 @@ fun SpotlightPodium(
             maxLines = 1
         )
         Text(
-            text = String.format("%.1f", entry.averageScore),
+            text = stringResource(R.string.score_format, entry.averageScore),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Black,
             color = PrimaryDark

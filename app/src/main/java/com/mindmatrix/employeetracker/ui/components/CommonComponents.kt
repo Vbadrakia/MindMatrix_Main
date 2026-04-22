@@ -42,6 +42,39 @@ import com.mindmatrix.employeetracker.ui.theme.*
 import com.mindmatrix.employeetracker.viewmodel.Insight
 import com.mindmatrix.employeetracker.viewmodel.InsightPriority
 
+@Composable
+fun BadgeChip(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = color.copy(alpha = 0.15f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Stars,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
+    }
+}
+
 fun getDeadlineColor(dueDateStr: String): Color {
     if (dueDateStr.isBlank()) return OnSurfaceVariant
     try {
@@ -95,7 +128,7 @@ fun ShimmerItem(modifier: Modifier = Modifier) {
 
 @Composable
 fun DashboardTopBar(
-    title: String = "Performance",
+    title: String = stringResource(R.string.performance),
     subtitle: String? = null,
     onBackClick: (() -> Unit)? = null,
     onNotificationClick: (() -> Unit)? = null,
@@ -115,7 +148,7 @@ fun DashboardTopBar(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Go back",
+                        contentDescription = stringResource(R.string.back),
                         tint = Primary
                     )
                 }
@@ -165,18 +198,22 @@ fun DashboardTopBar(
                     onClick = onNotificationClick,
                     modifier = Modifier.size(48.dp)
                 ) {
-                    Icon(Icons.Default.Notifications, contentDescription = "View notifications", tint = Primary)
+                    Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.view_notifications), tint = Primary)
                 }
             }
         }
     }
 }
 
+import coil.compose.SubcomposeAsyncImage
+
 @Composable
 fun EmployeeAvatar(
     name: String,
+    photoUrl: String? = null,
     modifier: Modifier = Modifier,
-    size: Int = 40
+    size: Int = 40,
+    onClick: (() -> Unit)? = null
 ) {
     val initials = name.split(" ")
         .filter { it.isNotEmpty() }
@@ -188,6 +225,7 @@ fun EmployeeAvatar(
         modifier = modifier
             .size(size.dp)
             .clip(CircleShape)
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(Primary, PrimaryDark)
@@ -195,12 +233,33 @@ fun EmployeeAvatar(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = initials,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = (size / 2.5).sp
-        )
+        if (!photoUrl.isNullOrEmpty()) {
+            SubcomposeAsyncImage(
+                model = photoUrl,
+                contentDescription = stringResource(R.string.avatar_icon_desc, name),
+                modifier = Modifier.fillMaxSize(),
+                loading = {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(size.dp / 2), strokeWidth = 2.dp, color = Color.White)
+                    }
+                },
+                error = {
+                    Text(
+                        text = initials,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = (size / 2.5).sp
+                    )
+                }
+            )
+        } else {
+            Text(
+                text = initials,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = (size / 2.5).sp
+            )
+        }
     }
 }
 
@@ -247,7 +306,7 @@ fun StatCard(
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = "$title icon",
+                    contentDescription = stringResource(R.string.icon_desc_format, title),
                     tint = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier.size(28.dp)
                 )
@@ -390,7 +449,7 @@ fun TaskSmallCard(task: Task, onClick: () -> Unit = {}) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = task.priority.name,
+                    text = getLocalizedTaskPriority(task.priority),
                     style = MaterialTheme.typography.bodySmall,
                     color = getTaskPriorityColor(task.priority),
                     fontWeight = FontWeight.ExtraBold
@@ -398,7 +457,7 @@ fun TaskSmallCard(task: Task, onClick: () -> Unit = {}) {
             }
             
             StatusChip(
-                text = task.status.name.replace("_", " "),
+                text = getLocalizedTaskStatus(task.status),
                 color = getTaskStatusColor(task.status)
             )
         }
@@ -502,6 +561,39 @@ fun getTaskPriorityColor(priority: TaskPriority): Color {
 }
 
 @Composable
+fun getLocalizedAttendanceStatus(status: AttendanceStatus): String {
+    return when (status) {
+        AttendanceStatus.PRESENT -> stringResource(R.string.attendance_status_present)
+        AttendanceStatus.ABSENT -> stringResource(R.string.attendance_status_absent)
+        AttendanceStatus.LATE -> stringResource(R.string.attendance_status_late)
+        AttendanceStatus.LEAVE -> stringResource(R.string.attendance_status_on_leave)
+        AttendanceStatus.HALF_DAY -> stringResource(R.string.attendance_status_half_day)
+    }
+}
+
+@Composable
+fun getLocalizedTaskStatus(status: TaskStatus): String {
+    return when (status) {
+        TaskStatus.PENDING -> stringResource(R.string.task_status_pending)
+        TaskStatus.IN_PROGRESS -> stringResource(R.string.task_status_in_progress)
+        TaskStatus.COMPLETED -> stringResource(R.string.task_status_completed)
+        TaskStatus.REVIEWED -> stringResource(R.string.task_status_reviewed)
+        TaskStatus.OVERDUE -> stringResource(R.string.task_status_overdue)
+        TaskStatus.CANCELLED -> stringResource(R.string.task_status_cancelled)
+    }
+}
+
+@Composable
+fun getLocalizedTaskPriority(priority: TaskPriority): String {
+    return when (priority) {
+        TaskPriority.LOW -> stringResource(R.string.task_priority_low)
+        TaskPriority.MEDIUM -> stringResource(R.string.task_priority_medium)
+        TaskPriority.HIGH -> stringResource(R.string.task_priority_high)
+        TaskPriority.CRITICAL -> stringResource(R.string.task_priority_critical)
+    }
+}
+
+@Composable
 fun AdminStatCard(
     label: String,
     value: String,
@@ -553,7 +645,7 @@ fun AdminStatCard(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                                contentDescription = "Trend up",
+                                contentDescription = stringResource(R.string.trend_up),
                                 modifier = Modifier.size(12.dp),
                                 tint = trendColor
                             )
@@ -598,7 +690,12 @@ fun AdminStatCard(
 }
 
 @Composable
-fun TopPerformerCard(employee: Employee) {
+fun TopPerformerCard(
+    name: String,
+    designation: String,
+    score: Double,
+    onClick: () -> Unit = {}
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
@@ -616,7 +713,7 @@ fun TopPerformerCard(employee: Employee) {
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = { /* Handle click */ }
+                onClick = onClick
             ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
@@ -626,17 +723,17 @@ fun TopPerformerCard(employee: Employee) {
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            EmployeeAvatar(name = employee.name, size = 64)
+            EmployeeAvatar(name = name, size = 64)
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = employee.name,
+                text = name,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 color = PrimaryDark
             )
             Text(
-                text = employee.designation,
+                text = designation,
                 style = MaterialTheme.typography.bodySmall,
                 color = OnSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -647,8 +744,9 @@ fun TopPerformerCard(employee: Employee) {
                 color = SuccessContainer,
                 shape = RoundedCornerShape(8.dp)
             ) {
+                val formattedScore = if (score % 1.0 == 0.0) score.toInt().toString() else String.format("%.1f", score)
                 Text(
-                    text = "Score: 4.9",
+                    text = stringResource(R.string.score_label, formattedScore),
                     modifier = Modifier.padding(vertical = 4.dp),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -671,15 +769,15 @@ fun PerformanceTrendCard(
     // Process reviews into chart data (last 6 months or reviews)
     val sortedReviews = reviews.sortedBy { it.reviewDate }.takeLast(6)
     val data = sortedReviews.map { review ->
-        review.period.take(3) to (review.weightedScore.toFloat() / 5.0f) // Scale to 0-1
+        review.period.take(3) to (review.weightedScore.toFloat() / 100f) // Scale to 0-1
     }.ifEmpty {
         listOf(
-            "Jan" to 0.4f, "Feb" to 0.6f, "Mar" to 0.5f, "Apr" to 0.7f, 
-            "May" to 0.65f, "Jun" to 0.85f
+            "Jan" to 0.72f, "Feb" to 0.85f, "Mar" to 0.78f, "Apr" to 0.92f, 
+            "May" to 0.88f, "Jun" to 0.95f
         )
     }
     
-    val scores = sortedReviews.map { (it.weightedScore * 20).toInt() }.ifEmpty {
+    val scores = sortedReviews.map { it.weightedScore.toInt() }.ifEmpty {
         listOf(72, 85, 78, 92, 88, 95)
     }
 
@@ -697,13 +795,13 @@ fun PerformanceTrendCard(
             ) {
                 Column {
                     Text(
-                        text = "Performance Trend",
+                        text = stringResource(R.string.performance_trend),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryDark
                     )
                     Text(
-                        text = "Avg. Monthly Growth: +12%",
+                        text = stringResource(R.string.avg_monthly_growth, "+12%"),
                         style = MaterialTheme.typography.bodySmall,
                         color = Success
                     )
@@ -711,7 +809,7 @@ fun PerformanceTrendCard(
                 IconButton(onClick = onViewDetailedTrend) {
                     Icon(
                         imageVector = Icons.Default.Analytics, 
-                        contentDescription = "View detailed analytics",
+                        contentDescription = stringResource(R.string.view_detailed_analytics),
                         tint = Primary.copy(alpha = 0.7f)
                     )
                 }
@@ -796,13 +894,13 @@ fun PerformanceTrendCard(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "${data[selectedIndex].first} Breakdown",
+                                text = stringResource(R.string.breakdown_format, data[selectedIndex].first),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = PrimaryDark
                             )
                             Text(
-                                text = "Score: ${scores[selectedIndex]}",
+                                text = stringResource(R.string.score_label, scores[selectedIndex].toString()),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = Primary
@@ -840,7 +938,7 @@ fun DepartmentScoresCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Department Scores",
+                    text = stringResource(R.string.department_scores),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = PrimaryDark
@@ -848,7 +946,7 @@ fun DepartmentScoresCard(
                 IconButton(onClick = onNavigateToReports) {
                     Icon(
                         imageVector = Icons.Default.FilterList,
-                        contentDescription = "View detailed reports",
+                        contentDescription = stringResource(R.string.view_detailed_reports),
                         tint = Primary,
                         modifier = Modifier.size(24.dp)
                     )
@@ -858,10 +956,10 @@ fun DepartmentScoresCard(
             
             val displayData = departmentAverages.ifEmpty {
                 listOf(
-                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Engineering", 4.8),
-                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Design", 4.5),
-                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Marketing", 4.2),
-                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Sales", 3.9)
+                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Engineering", 92.5),
+                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Design", 88.2),
+                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Marketing", 85.0),
+                    com.mindmatrix.employeetracker.data.model.DepartmentAverage("Sales", 78.4)
                 )
             }
 
@@ -875,7 +973,7 @@ fun DepartmentScoresCard(
                         Text(text = String.format(java.util.Locale.getDefault(), "%.1f", avg.averageScore), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Primary)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    AnimatedProgressBar(progress = (avg.averageScore.toFloat() / 5f), color = Primary)
+                    AnimatedProgressBar(progress = (avg.averageScore.toFloat() / 100f), color = Primary)
                 }
             }
         }
@@ -910,13 +1008,13 @@ fun WorkloadDistributionCard(
             ) {
                 Column {
                     Text(
-                        text = "Workload Distribution",
+                        text = stringResource(R.string.workload_distribution),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryDark
                     )
                     Text(
-                        text = "Active tasks per employee",
+                        text = stringResource(R.string.active_tasks_per_employee),
                         style = MaterialTheme.typography.bodySmall,
                         color = OnSurfaceVariant
                     )
@@ -944,7 +1042,7 @@ fun WorkloadDistributionCard(
                             color = PrimaryDark
                         )
                         Text(
-                            text = "$count tasks",
+                            text = stringResource(R.string.tasks_count_format, count),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = if (count > 5) Error else Primary
@@ -965,7 +1063,7 @@ fun WorkloadDistributionCard(
             
             if (workloadData.isEmpty()) {
                 Text(
-                    text = "No active workload data available",
+                    text = stringResource(R.string.no_workload_data),
                     style = MaterialTheme.typography.bodyMedium,
                     color = OnSurfaceVariant,
                     modifier = Modifier.padding(vertical = 16.dp),
@@ -988,7 +1086,7 @@ fun InsightsCard(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Smart Insights",
+            text = stringResource(R.string.smart_insights),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = PrimaryDark,
@@ -1113,7 +1211,7 @@ fun StarRatingWidget(
             
             Icon(
                 imageVector = icon,
-                contentDescription = "Star $i",
+                contentDescription = stringResource(R.string.star_n, i),
                 tint = tint,
                 modifier = starModifier
             )

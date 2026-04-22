@@ -33,7 +33,9 @@ data class Employee(
     val joinDate: String = "",
     val profileImageUrl: String = "",
     val isActive: Boolean = true,
-    val managerId: String = ""
+    val managerId: String = "",
+    val badges: List<String> = emptyList(),
+    val lastUpdated: Long = System.currentTimeMillis()
 ) {
     /**
      * Convert to a Map for Firestore storage.
@@ -48,7 +50,9 @@ data class Employee(
         "joinDate" to joinDate,
         "profileImageUrl" to profileImageUrl,
         "isActive" to isActive,
-        "managerId" to managerId
+        "managerId" to managerId,
+        "badges" to badges,
+        "lastUpdated" to lastUpdated
     )
 
     companion object {
@@ -70,7 +74,9 @@ data class Employee(
             joinDate = map["joinDate"] as? String ?: "",
             profileImageUrl = map["profileImageUrl"] as? String ?: "",
             isActive = map["isActive"] as? Boolean ?: true,
-            managerId = map["managerId"] as? String ?: ""
+            managerId = map["managerId"] as? String ?: "",
+            badges = (map["badges"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+            lastUpdated = (map["lastUpdated"] as? Number)?.toLong() ?: System.currentTimeMillis()
         )
     }
 }

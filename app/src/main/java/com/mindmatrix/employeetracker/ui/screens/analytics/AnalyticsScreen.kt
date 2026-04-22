@@ -42,8 +42,8 @@ fun AnalyticsScreen(
     Scaffold(
         topBar = {
             DashboardTopBar(
-                title = "Analytics",
-                subtitle = "Organization wide metrics",
+                title = stringResource(R.string.analytics),
+                subtitle = stringResource(R.string.org_metrics),
                 onBackClick = onNavigateBack,
                 onNotificationClick = null
             )
@@ -59,7 +59,7 @@ fun AnalyticsScreen(
         ) {
             item {
                 Text(
-                    text = "Department Performance",
+                    text = stringResource(R.string.dept_performance),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = PrimaryDark
@@ -70,7 +70,7 @@ fun AnalyticsScreen(
 
             item {
                 Text(
-                    text = "Task Status Distribution",
+                    text = stringResource(R.string.task_distribution),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = PrimaryDark
@@ -81,7 +81,7 @@ fun AnalyticsScreen(
 
             item {
                 Text(
-                    text = "Company Growth Trend",
+                    text = stringResource(R.string.company_growth),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = PrimaryDark
@@ -97,7 +97,7 @@ fun AnalyticsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("View Detailed Leaderboard", color = Color.White, modifier = Modifier.padding(8.dp))
+                    Text(stringResource(R.string.view_detailed_leaderboard), color = Color.White, modifier = Modifier.padding(8.dp))
                 }
             }
             
@@ -118,7 +118,7 @@ fun TaskDistributionChart() {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                "Overall Task Completion Distribution",
+                stringResource(R.string.task_completion_distribution),
                 style = MaterialTheme.typography.bodyMedium,
                 color = OnSurfaceVariant,
                 fontWeight = FontWeight.Medium
@@ -132,10 +132,10 @@ fun TaskDistributionChart() {
             Spacer(modifier = Modifier.height(16.dp))
             // Legend
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                LegendItem("Done", Success)
-                LegendItem("Ongoing", Tertiary)
-                LegendItem("Pending", Primary)
-                LegendItem("Overdue", Error)
+                LegendItem(stringResource(R.string.done), Success)
+                LegendItem(stringResource(R.string.ongoing), Tertiary)
+                LegendItem(stringResource(R.string.pending), Primary)
+                LegendItem(stringResource(R.string.overdue), Error)
             }
         }
     }
@@ -154,10 +154,10 @@ fun DepartmentPerformanceChart(departmentAverages: List<com.mindmatrix.employeet
     // Fallback data if empty
     val deptData = departmentAverages.ifEmpty {
         listOf(
-            com.mindmatrix.employeetracker.data.model.DepartmentAverage("Engineering", 4.2),
-            com.mindmatrix.employeetracker.data.model.DepartmentAverage("Design", 4.5),
-            com.mindmatrix.employeetracker.data.model.DepartmentAverage("Sales", 3.8),
-            com.mindmatrix.employeetracker.data.model.DepartmentAverage("Marketing", 4.6)
+            com.mindmatrix.employeetracker.data.model.DepartmentAverage("Engineering", 82.0),
+            com.mindmatrix.employeetracker.data.model.DepartmentAverage("Design", 88.0),
+            com.mindmatrix.employeetracker.data.model.DepartmentAverage("Sales", 76.0),
+            com.mindmatrix.employeetracker.data.model.DepartmentAverage("Marketing", 91.0)
         )
     }
 
@@ -172,7 +172,7 @@ fun DepartmentPerformanceChart(departmentAverages: List<com.mindmatrix.employeet
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                "Average Score per Department",
+                stringResource(R.string.avg_score_dept),
                 style = MaterialTheme.typography.bodyMedium,
                 color = OnSurfaceVariant,
                 fontWeight = FontWeight.Medium
@@ -192,7 +192,7 @@ fun DepartmentPerformanceChart(departmentAverages: List<com.mindmatrix.employeet
 @Composable
 fun CompanyTrendChart() {
     // Mock trend data
-    val chartEntryModel = entryModelOf(3.2f, 3.5f, 3.8f, 4.0f, 4.2f, 4.5f)
+    val chartEntryModel = entryModelOf(64f, 70f, 76f, 80f, 84f, 90f)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -202,7 +202,7 @@ fun CompanyTrendChart() {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                "Overall Performance Trend (Last 6 Months)",
+                stringResource(R.string.performance_trend_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = OnSurfaceVariant,
                 fontWeight = FontWeight.Medium

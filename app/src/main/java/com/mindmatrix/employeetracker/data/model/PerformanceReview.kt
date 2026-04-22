@@ -16,10 +16,10 @@ data class PerformanceReview(
     val reviewDate: String = "",
     val period: String = "",
     val qualityScore: Int = 0,
-    val timelinessScore: Int = 0,
+    val productivityScore: Int = 0,
     val attendanceScore: Int = 0,
-    val communicationScore: Int = 0,
-    val innovationScore: Int = 0,
+    val softSkillsScore: Int = 0,
+    val teamworkScore: Int = 0,
     val rawScore: Double = 0.0,
     val weightedScore: Double = 0.0,
     val status: ReviewStatus = ReviewStatus.APPROVED,
@@ -32,14 +32,14 @@ data class PerformanceReview(
      * Calculates raw and weighted scores based on performance metrics.
      */
     fun withCalculatedScores(): PerformanceReview {
-        val raw = (qualityScore + timelinessScore + attendanceScore + communicationScore + innovationScore).toDouble() / 5.0
+        val raw = (qualityScore + productivityScore + attendanceScore + softSkillsScore + teamworkScore).toDouble() / 5.0
         
         // quality * 0.30 + timeliness * 0.25 + attendance * 0.15 + communication * 0.15 + innovation * 0.15
         val weighted = (qualityScore * 0.30) +
-                (timelinessScore * 0.25) +
+                (productivityScore * 0.25) +
                 (attendanceScore * 0.15) +
-                (communicationScore * 0.15) +
-                (innovationScore * 0.15)
+                (softSkillsScore * 0.15) +
+                (teamworkScore * 0.15)
         
         return this.copy(
             rawScore = raw,
@@ -53,10 +53,10 @@ data class PerformanceReview(
         "reviewDate" to reviewDate,
         "period" to period,
         "qualityScore" to qualityScore,
-        "timelinessScore" to timelinessScore,
+        "productivityScore" to productivityScore,
         "attendanceScore" to attendanceScore,
-        "communicationScore" to communicationScore,
-        "innovationScore" to innovationScore,
+        "softSkillsScore" to softSkillsScore,
+        "teamworkScore" to teamworkScore,
         "rawScore" to rawScore,
         "weightedScore" to weightedScore,
         "status" to status.name,
@@ -74,10 +74,10 @@ data class PerformanceReview(
             reviewDate = map["reviewDate"] as? String ?: "",
             period = map["period"] as? String ?: "",
             qualityScore = (map["qualityScore"] as? Number)?.toInt() ?: 0,
-            timelinessScore = (map["timelinessScore"] as? Number)?.toInt() ?: 0,
+            productivityScore = (map["productivityScore"] as? Number)?.toInt() ?: 0,
             attendanceScore = (map["attendanceScore"] as? Number)?.toInt() ?: 0,
-            communicationScore = (map["communicationScore"] as? Number)?.toInt() ?: 0,
-            innovationScore = (map["innovationScore"] as? Number)?.toInt() ?: 0,
+            softSkillsScore = (map["softSkillsScore"] as? Number)?.toInt() ?: 0,
+            teamworkScore = (map["teamworkScore"] as? Number)?.toInt() ?: 0,
             rawScore = (map["rawScore"] as? Number)?.toDouble() ?: 0.0,
             weightedScore = (map["weightedScore"] as? Number)?.toDouble() ?: 0.0,
             status = try {

@@ -43,8 +43,8 @@ fun PerformanceHistoryScreen(
     Scaffold(
         topBar = {
             DashboardTopBar(
-                title = "Performance",
-                subtitle = "Review History",
+                title = stringResource(R.string.performance),
+                subtitle = stringResource(R.string.review_history),
                 onNotificationClick = { /* Handle notifications */ }
             )
         },
@@ -77,7 +77,7 @@ fun PerformanceHistoryScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Overall Average",
+                                text = stringResource(R.string.overall_average),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = Color.White.copy(alpha = 0.8f),
                                 fontWeight = FontWeight.Medium
@@ -103,7 +103,7 @@ fun PerformanceHistoryScreen(
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(
-                                    text = "${performanceState.reviews.size} total reviews",
+                                    text = stringResource(R.string.total_reviews_count, performanceState.reviews.size),
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = Color.White,
@@ -118,7 +118,7 @@ fun PerformanceHistoryScreen(
             // Section Title
             item {
                 Text(
-                    text = "Review History",
+                    text = stringResource(R.string.review_history),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = PrimaryDark,
@@ -130,13 +130,16 @@ fun PerformanceHistoryScreen(
                 item {
                     EmptyState(
                         icon = Icons.Default.Assessment,
-                        title = "No reviews yet",
-                        subtitle = "Performance evaluations will appear here once submitted by your lead."
+                        title = stringResource(R.string.no_reviews_yet),
+                        subtitle = stringResource(R.string.review_history_desc)
                     )
                 }
             } else {
                 items(performanceState.reviews.sortedByDescending { it.reviewDate }) { review ->
-                    PerformanceReviewCard(review = review)
+                    PerformanceReviewCard(
+                        review = review,
+                        showApproveButton = false
+                    )
                 }
             }
             
@@ -148,7 +151,12 @@ fun PerformanceHistoryScreen(
 }
 
 @Composable
-fun PerformanceReviewCard(review: com.mindmatrix.employeetracker.data.model.PerformanceReview) {
+@Composable
+fun PerformanceReviewCard(
+    review: com.mindmatrix.employeetracker.data.model.PerformanceReview,
+    showApproveButton: Boolean = false,
+    onApprove: () -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -162,12 +170,29 @@ fun PerformanceReviewCard(review: com.mindmatrix.employeetracker.data.model.Perf
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
-                        text = review.period.ifBlank { "Annual Review" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = OnSurface
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = review.period.ifBlank { stringResource(R.string.annual_review_default) },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        // Status Badge
+                        val isApproved = review.status == com.mindmatrix.employeetracker.data.model.ReviewStatus.APPROVED
+                        Surface(
+                            color = if (isApproved) Success.copy(alpha = 0.1f) else PriorityMedium.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = if (isApproved) stringResource(R.string.approved) else stringResource(R.string.submitted),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isApproved) Success else PriorityMedium
+                            )
+                        }
+                    }
                     Text(
                         text = review.reviewDate,
                         style = MaterialTheme.typography.bodySmall,
@@ -175,22 +200,39 @@ fun PerformanceReviewCard(review: com.mindmatrix.employeetracker.data.model.Perf
                         fontWeight = FontWeight.Medium
                     )
                 }
-                StarRatingWidget(
-                    rating = review.weightedScore.toInt(),
-                    starSize = 20.dp,
-                    modifier = Modifier.padding(vertical = 6.dp)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = when {
+                            review.weightedScore >= 80 -> Success.copy(alpha = 0.1f)
+                            review.weightedScore >= 60 -> Primary.copy(alpha = 0.1f)
+                            else -> PriorityMedium.copy(alpha = 0.1f)
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "${review.weightedScore.toInt()}/100",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = when {
+                                review.weightedScore >= 80 -> Success
+                                review.weightedScore >= 60 -> Primary
+                                else -> PriorityMedium
+                            }
+                        )
+                    }
+                }
             }
             
             Spacer(modifier = Modifier.height(20.dp))
 
             // Score breakdown with progress bars
             val breakdownItems = listOf(
-                Triple("Productivity", review.timelinessScore.toFloat(), Success),
-                Triple("Quality", review.qualityScore.toFloat(), Primary),
-                Triple("Attendance", review.attendanceScore.toFloat(), Tertiary),
-                Triple("Teamwork", review.communicationScore.toFloat(), SecondaryDark),
-                Triple("Soft Skills", review.innovationScore.toFloat(), PriorityMedium)
+                Triple(stringResource(R.string.productivity), review.productivityScore.toFloat(), Success),
+                Triple(stringResource(R.string.quality), review.qualityScore.toFloat(), Primary),
+                Triple(stringResource(R.string.attendance), review.attendanceScore.toFloat(), Tertiary),
+                Triple(stringResource(R.string.teamwork), review.teamworkScore.toFloat(), SecondaryDark),
+                Triple(stringResource(R.string.soft_skills), review.softSkillsScore.toFloat(), PriorityMedium)
             )
 
             breakdownItems.forEach { (label, score, color) ->
@@ -207,7 +249,7 @@ fun PerformanceReviewCard(review: com.mindmatrix.employeetracker.data.model.Perf
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "${score.toInt()}/5",
+                            text = "${score.toInt()}/100",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = OnSurface
@@ -215,7 +257,7 @@ fun PerformanceReviewCard(review: com.mindmatrix.employeetracker.data.model.Perf
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     LinearProgressIndicator(
-                        progress = { score / 5f },
+                        progress = { score / 100f },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp)
@@ -244,6 +286,20 @@ fun PerformanceReviewCard(review: com.mindmatrix.employeetracker.data.model.Perf
                         color = OnSurfaceVariant,
                         fontWeight = FontWeight.Medium
                     )
+                }
+            }
+
+            if (showApproveButton && review.status == com.mindmatrix.employeetracker.data.model.ReviewStatus.SUBMITTED) {
+                Spacer(modifier = Modifier.height(20.dp))
+                Button(
+                    onClick = onApprove,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Success)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.approve_review))
                 }
             }
         }

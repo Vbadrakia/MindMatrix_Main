@@ -30,6 +30,19 @@ class PerformanceViewModel @Inject constructor(
     private val _state = MutableStateFlow(PerformanceState())
     val state: StateFlow<PerformanceState> = _state.asStateFlow()
 
+    fun loadAllReviews() {
+        viewModelScope.launch {
+            performanceRepository.syncPerformanceData()
+            _state.value = _state.value.copy(isLoading = true)
+            performanceRepository.getAllReviews().collect { reviews ->
+                _state.value = _state.value.copy(
+                    reviews = reviews,
+                    isLoading = false
+                )
+            }
+        }
+    }
+
     fun loadReviewsForEmployee(employeeId: String) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
@@ -79,6 +92,27 @@ class PerformanceViewModel @Inject constructor(
         viewModelScope.launch {
             performanceRepository.updateReview(review).onFailure { e ->
                 _state.value = _state.value.copy(error = e.message)
+            }
+        }
+    }
+
+    fun approveReview(reviewId: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
+            val review = _state.value.reviews.find { it.id == reviewId }
+            if (review != null) {
+                val updatedReview = review.copy(status = com.mindmatrix.employeetracker.data.model.ReviewStatus.APPROVED)
+                performanceRepository.updateReview(updatedReview).onSuccess {
+                    // Update local state immediately for better UX
+                    _state.value = _state.value.copy(
+                        reviews = _state.value.reviews.map { if (it.id == reviewId) updatedReview else it },
+                        isLoading = false
+                    )
+                }.onFailure { e ->
+                    _state.value = _state.value.copy(error = e.message, isLoading = false)
+                }
+            } else {
+                _state.value = _state.value.copy(isLoading = false)
             }
         }
     }
