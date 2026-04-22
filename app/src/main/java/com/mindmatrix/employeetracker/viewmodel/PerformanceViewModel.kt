@@ -92,7 +92,15 @@ class PerformanceViewModel @Inject constructor(
             _state.value = _state.value.copy(
                 analytics = snapshot,
                 departmentAverages = snapshot.departmentDistribution,
-                leaderboard = (snapshot.topPerformers + snapshot.lowPerformers).distinctBy { it.employeeId },
+                leaderboard = snapshot.employeeAverages.mapIndexed { index, point ->
+                    LeaderboardEntry(
+                        employeeId = point.employeeId,
+                        employeeName = point.employeeName,
+                        department = point.department,
+                        averageScore = point.averageRating,
+                        rank = index + 1
+                    )
+                },
                 isLoading = false
             )
         }

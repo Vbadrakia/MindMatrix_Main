@@ -134,8 +134,8 @@ class PerformanceRepository @Inject constructor(
                 val employeeDept = employees[review.employeeId]?.second
                 val deptMatch = department.isNullOrBlank() || employeeDept == department
                 val reviewDate = parseDate(review.date)
-                val startMatch = start == null || (reviewDate != null && !reviewDate.isBefore(start))
-                val endMatch = end == null || (reviewDate != null && !reviewDate.isAfter(end))
+                val startMatch = start == null || reviewDate == null || !reviewDate.isBefore(start)
+                val endMatch = end == null || reviewDate == null || !reviewDate.isAfter(end)
                 deptMatch && startMatch && endMatch
             }
 

@@ -8,6 +8,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -102,7 +103,7 @@ class EmployeeRepository @Inject constructor(
     }
 
     override suspend fun getEmployeeByEmail(email: String): Employee? = try {
-        val normalized = email.trim().lowercase()
+        val normalized = email.trim().lowercase(Locale.ROOT)
         val snapshot = collection
             .whereEqualTo("email", normalized)
             .get()

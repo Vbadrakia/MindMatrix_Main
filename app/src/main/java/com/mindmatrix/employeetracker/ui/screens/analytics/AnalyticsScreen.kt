@@ -43,7 +43,6 @@ import com.mindmatrix.employeetracker.R
 import com.mindmatrix.employeetracker.data.model.DepartmentAverage
 import com.mindmatrix.employeetracker.ui.components.DashboardTopBar
 import com.mindmatrix.employeetracker.ui.theme.Background
-import com.mindmatrix.employeetracker.ui.theme.Error
 import com.mindmatrix.employeetracker.ui.theme.OnSurfaceVariant
 import com.mindmatrix.employeetracker.ui.theme.Primary
 import com.mindmatrix.employeetracker.ui.theme.PrimaryDark
@@ -57,7 +56,6 @@ import com.patrykandpatrick.vico.compose.chart.Chart
 import com.patrykandpatrick.vico.compose.chart.column.columnChart
 import com.patrykandpatrick.vico.compose.chart.line.lineChart
 import com.patrykandpatrick.vico.core.entry.entryModelOf
-import kotlin.math.PI
 
 @Composable
 fun AnalyticsScreen(
@@ -266,7 +264,11 @@ private fun DepartmentDistributionPieChart(departmentAverages: List<DepartmentAv
         return
     }
 
-    val total = departmentAverages.sumOf { it.averageScore }.coerceAtLeast(0.0001)
+    val total = departmentAverages.sumOf { it.averageScore }
+    if (total <= 0.0) {
+        EmptyAnalyticsCard()
+        return
+    }
     val colors = listOf(Primary, Success, Error, Color(0xFF9C27B0), Color(0xFF03A9F4), Color(0xFFFF9800))
 
     ChartCard {

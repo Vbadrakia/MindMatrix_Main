@@ -29,7 +29,7 @@ data class Task(
     val isPersonalGoal: Boolean = false,
     val lastUpdated: Long = System.currentTimeMillis()
 ) {
-    // Backward compatibility aliases for legacy UI references.
+    // Compatibility aliases used by existing UI/domain code paths.
     val assignedTo: String get() = employeeId
     val dueDate: String get() = deadline
     val createdAt: String get() = assignedDate

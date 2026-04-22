@@ -104,7 +104,7 @@ fun ReportsScreen(
                 FloatingActionButton(
                     onClick = {
                         val csvData = StringBuilder()
-                        csvData.append("employee_id,employee_name,department,email,contact,joining_date,average_rating,task_total,task_completed,task_completion_percentage\\n")
+                        csvData.append("employee_id,employee_name,department,email,contact,joining_date,average_rating,task_total,task_completed,task_completion_percentage\n")
 
                         val exportEmployees = if (isAdmin) {
                             employeeState.employees.filter { selectedDeptFilter == null || it.department == selectedDeptFilter }
@@ -128,7 +128,7 @@ fun ReportsScreen(
                             csvData.append("${String.format(Locale.getDefault(), "%.2f", average)},")
                             csvData.append("${employeeTasks.size},")
                             csvData.append("$completed,")
-                            csvData.append("${String.format(Locale.getDefault(), "%.2f", completion)}\\n")
+                            csvData.append("${String.format(Locale.getDefault(), "%.2f", completion)}\n")
                         }
                         
                         try {

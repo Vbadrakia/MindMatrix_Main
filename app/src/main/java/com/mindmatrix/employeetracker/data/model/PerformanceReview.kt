@@ -140,4 +140,3 @@ enum class ReviewStatus {
     SUBMITTED,    // Pending Approval
     APPROVED      // Finalized
 }
-        "qualityScore" to qualityScore,

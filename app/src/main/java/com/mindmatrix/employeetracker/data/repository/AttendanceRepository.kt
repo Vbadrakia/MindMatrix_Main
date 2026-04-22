@@ -18,18 +18,38 @@ class AttendanceRepository @Inject constructor(
     private val collection = firestore.collection("attendance")
 
     override fun getAttendanceForEmployee(employeeId: String): Flow<List<AttendanceRecord>> = callbackFlow {
+        var primaryRecords: List<AttendanceRecord> = emptyList()
+        var legacyRecords: List<AttendanceRecord> = emptyList()
+
         val listener = collection
+            .whereEqualTo("employee_id", employeeId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
                     return@addSnapshotListener
                 }
-                val records = snapshot?.documents?.map { doc ->
+                primaryRecords = snapshot?.documents?.map { doc ->
                     AttendanceRecord.fromMap(doc.id, doc.data ?: emptyMap())
-                }?.filter { it.employeeId == employeeId } ?: emptyList()
-                trySend(records)
+                } ?: emptyList()
+                trySend((primaryRecords + legacyRecords).distinctBy { it.id })
             }
-        awaitClose { listener.remove() }
+
+        val legacyListener = collection
+            .whereEqualTo("employeeId", employeeId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                legacyRecords = snapshot?.documents?.map { doc ->
+                    AttendanceRecord.fromMap(doc.id, doc.data ?: emptyMap())
+                } ?: emptyList()
+                trySend((primaryRecords + legacyRecords).distinctBy { it.id })
+            }
+        awaitClose {
+            listener.remove()
+            legacyListener.remove()
+        }
     }
 
     override fun getAttendanceByDate(date: String): Flow<List<AttendanceRecord>> = callbackFlow {
@@ -78,10 +98,14 @@ class AttendanceRepository @Inject constructor(
     }
 
     override suspend fun getAttendanceSummary(employeeId: String): List<StatusCount> = try {
-        val snapshot = collection.get().await()
-        val records = snapshot.documents.map { doc ->
+        val snapshot = collection
+            .whereEqualTo("employee_id", employeeId)
+            .get()
+            .await()
+        val legacySnapshot = collection.whereEqualTo("employeeId", employeeId).get().await()
+        val records = (snapshot.documents + legacySnapshot.documents).map { doc ->
             AttendanceRecord.fromMap(doc.id, doc.data ?: emptyMap())
-        }.filter { it.employeeId == employeeId }
+        }.distinctBy { it.id }
         AttendanceStatus.entries.map { status ->
             StatusCount(
                 status = status,
@@ -93,10 +117,19 @@ class AttendanceRepository @Inject constructor(
     }
 
     override suspend fun getTodayAttendanceForEmployee(employeeId: String, date: String): AttendanceRecord? = try {
-        val snapshot = collection.whereEqualTo("date", date).get().await()
-        snapshot.documents
+        val snapshot = collection
+            .whereEqualTo("employee_id", employeeId)
+            .whereEqualTo("date", date)
+            .get()
+            .await()
+        (snapshot.documents + collection
+            .whereEqualTo("employeeId", employeeId)
+            .whereEqualTo("date", date)
+            .get()
+            .await()
+            .documents)
             .map { doc -> AttendanceRecord.fromMap(doc.id, doc.data ?: emptyMap()) }
-            .firstOrNull { it.employeeId == employeeId }
+            .firstOrNull()
     } catch (e: Exception) {
         null
     }
