@@ -1,39 +1,25 @@
 package com.mindmatrix.employeetracker.data.model
 
-import androidx.room.Entity
-import androidx.room.ColumnInfo
-import androidx.room.PrimaryKey
 
 /**
  * Represents a performance review for an employee.
- * Maps to Firestore "performance_reviews" collection and Room table.
+ * Maps to Firestore "performance" collection.
  */
-@Entity(tableName = "performance_reviews")
 data class PerformanceReview(
-    @PrimaryKey
-    val id: String = "",
-    @ColumnInfo(name = "employee_id")
-    val employeeId: String = "",
+        val id: String = "",
+        val employeeId: String = "",
     val reviewerId: String = "",
-    @ColumnInfo(name = "date")
-    val reviewDate: String = "",
+        val reviewDate: String = "",
     val period: String = "",
-    @ColumnInfo(name = "quality_score")
-    val qualityScore: Int = 0,
-    @ColumnInfo(name = "timeliness_score")
-    val timelinessScore: Int = 0,
-    @ColumnInfo(name = "attendance_score")
-    val attendanceScore: Int = 0,
-    @ColumnInfo(name = "communication_score")
-    val communicationScore: Int = 0,
-    @ColumnInfo(name = "innovation_score")
-    val innovationScore: Int = 0,
+        val qualityScore: Int = 0,
+        val timelinessScore: Int = 0,
+        val attendanceScore: Int = 0,
+        val communicationScore: Int = 0,
+        val innovationScore: Int = 0,
     val rawScore: Double = 0.0,
-    @ColumnInfo(name = "overall_rating")
-    val weightedScore: Double = 0.0,
+        val weightedScore: Double = 0.0,
     val status: ReviewStatus = ReviewStatus.APPROVED,
-    @ColumnInfo(name = "remarks")
-    val comments: String = "",
+        val comments: String = "",
     val goals: String = "",
     val strengths: String = "",
     val areasForImprovement: String = "",
