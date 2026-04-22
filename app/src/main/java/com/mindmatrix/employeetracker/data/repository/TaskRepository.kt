@@ -1,64 +1,99 @@
 package com.mindmatrix.employeetracker.data.repository
 
-import com.mindmatrix.employeetracker.data.local.dao.TaskDao
+import com.google.firebase.firestore.FirebaseFirestore
 import com.mindmatrix.employeetracker.data.model.Task
 import com.mindmatrix.employeetracker.data.model.TaskStatus
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class TaskRepository @Inject constructor(
-    private val taskDao: TaskDao
+    private val firestore: FirebaseFirestore
 ) : ITaskRepository {
-    override fun getAllTasks(): Flow<List<Task>> = taskDao.getAllTasks()
 
-    override fun getTasksForEmployee(employeeId: String): Flow<List<Task>> = 
-        taskDao.getTasksByEmployee(employeeId)
+    private val collection = firestore.collection("tasks")
 
-    override fun getTasksByStatus(status: TaskStatus): Flow<List<Task>> =
-        taskDao.getAllTasks().map { tasks -> tasks.filter { it.status == status } }
+    override fun getAllTasks(): Flow<List<Task>> = callbackFlow {
+        val listener = collection.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val tasks = snapshot?.documents?.map { doc ->
+                Task.fromMap(doc.id, doc.data ?: emptyMap())
+            }.orEmpty()
+            trySend(tasks)
+        }
+        awaitClose { listener.remove() }
+    }
+
+    override fun getTasksForEmployee(employeeId: String): Flow<List<Task>> = callbackFlow {
+        val listener = collection.whereEqualTo("employee_id", employeeId).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val tasks = snapshot?.documents?.map { doc ->
+                Task.fromMap(doc.id, doc.data ?: emptyMap())
+            }.orEmpty()
+            trySend(tasks)
+        }
+        awaitClose { listener.remove() }
+    }
+
+    override fun getTasksByStatus(status: TaskStatus): Flow<List<Task>> = callbackFlow {
+        val listener = collection.whereEqualTo("status", status.name).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val tasks = snapshot?.documents?.map { doc ->
+                Task.fromMap(doc.id, doc.data ?: emptyMap())
+            }.orEmpty()
+            trySend(tasks)
+        }
+        awaitClose { listener.remove() }
+    }
 
     override suspend fun addTask(task: Task): Result<String> = try {
-        val timestampedTask = task.copy(lastUpdated = System.currentTimeMillis())
-        val finalTask = timestampedTask.copy(id = task.id.ifBlank { java.util.UUID.randomUUID().toString() })
-        taskDao.insertTask(finalTask)
-        Result.success(finalTask.id)
+        val id = task.id.ifBlank { collection.document().id }
+        val payload = task.copy(id = id, lastUpdated = System.currentTimeMillis()).toMap() + ("id" to id)
+        collection.document(id).set(payload).await()
+        Result.success(id)
     } catch (e: Exception) {
         Result.failure(e)
     }
 
     override suspend fun updateTask(task: Task): Result<Unit> = try {
-        val timestampedTask = task.copy(lastUpdated = System.currentTimeMillis())
-        taskDao.updateTask(timestampedTask)
+        val payload = task.copy(lastUpdated = System.currentTimeMillis()).toMap() + ("id" to task.id)
+        collection.document(task.id).set(payload).await()
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
     }
 
     override suspend fun updateTaskStatus(taskId: String, status: TaskStatus): Result<Unit> = try {
-        val currentTask = taskDao.getTaskById(taskId).first() ?: return Result.failure(
-            IllegalArgumentException("Task not found: $taskId")
-        )
-        taskDao.updateTask(currentTask.copy(status = status, lastUpdated = System.currentTimeMillis()))
+        collection.document(taskId).update(
+            mapOf(
+                "status" to status.name,
+                "lastUpdated" to System.currentTimeMillis()
+            )
+        ).await()
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
     }
 
     override suspend fun deleteTask(id: String): Result<Unit> = try {
-        taskDao.deleteTaskById(id)
+        collection.document(id).delete().await()
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
     }
 
-    override suspend fun syncTasks(): Result<Unit> = try {
-        // Room-only mode: no remote sync required.
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+    override suspend fun syncTasks(): Result<Unit> = Result.success(Unit)
 }
