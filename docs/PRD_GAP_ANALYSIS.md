@@ -20,4 +20,4 @@ This pass shifts the project back to Firebase-first persistence (Firestore + Sto
 - Expand lifecycle-collection enforcement from screens to any non-screen composables still observing flow state directly.
 - Remove/retire Room module and entities fully once Firebase path is validated in all ViewModels.
 - Finalize strict PRD screen-by-screen audit and user flow verification.
-- Add/verify Firestore composite indexes for production query patterns.
+- Verify and deploy Firestore composite indexes (`firestore.indexes.json`) to target Firebase project.
