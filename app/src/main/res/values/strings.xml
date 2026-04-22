@@ -306,10 +306,6 @@
     <string name="select_employee">Select Employee</string>
     <string name="add_employee">Add New Employee</string>
     <string name="edit_employee">Edit Employee</string>
-    <string name="full_name">Full Name</string>
-    <string name="email_address">Email Address</string>
-    <string name="phone_number">Phone Number</string>
-    <string name="role">Role</string>
     <string name="save_changes">Save Changes</string>
     <string name="reset_password">Reset Password</string>
     <string name="forgot_password_title">Forgot your password?</string>
@@ -376,8 +372,7 @@
     <string name="export_report">Export Report</string>
     <string name="export_csv">Export CSV</string>
     <string name="no_permission_reports">You do not have permission to view reports.</string>
-    <string name="all_depts">All Depts</string>
-    <string name="department_label">Department: %s</string>
+    <string name="department_label_format">Department: %s</string>
     <string name="filter_overall">Overall</string>
     <string name="filter_quality">Quality</string>
     <string name="filter_timeliness">Timeliness</string>
@@ -397,7 +392,6 @@
     <string name="monthly_perf_trend">Monthly Performance Trend</string>
     <string name="leaderboard_title">Leaderboard</string>
     <string name="view_top_performers">View top performers</string>
-    <string name="dept_performance">Department Performance</string>
     <string name="employees_count_format">%d employees</string>
     <string name="avg_score_label">AVG SCORE</string>
     <string name="team_perf_index">Team Performance Index</string>

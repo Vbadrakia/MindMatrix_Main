@@ -159,7 +159,7 @@ fun ReportsScreen(
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.department_label, currentEmployee?.department ?: ""),
+                                text = stringResource(R.string.department_label_format, currentEmployee?.department ?: ""),
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
