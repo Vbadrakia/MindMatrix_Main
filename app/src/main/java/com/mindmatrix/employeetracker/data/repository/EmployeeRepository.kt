@@ -96,7 +96,7 @@ class EmployeeRepository @Inject constructor(
     }
 
     override suspend fun deleteEmployee(id: String): Result<Unit> = try {
-        collection.document(id).update("isActive", false).await()
+        collection.document(id).delete().await()
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)

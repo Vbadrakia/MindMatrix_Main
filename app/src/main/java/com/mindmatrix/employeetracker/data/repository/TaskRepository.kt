@@ -83,7 +83,7 @@ class TaskRepository @Inject constructor(
     }
 
     override suspend fun deleteTask(id: String): Result<Unit> = try {
-        collection.document(id).update("status", TaskStatus.CANCELLED.firestoreValue).await()
+        collection.document(id).delete().await()
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)

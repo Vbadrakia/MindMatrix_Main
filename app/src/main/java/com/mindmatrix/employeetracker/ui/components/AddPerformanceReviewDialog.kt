@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mindmatrix.employeetracker.R
+import com.mindmatrix.employeetracker.data.model.PerformanceReview
 import com.mindmatrix.employeetracker.ui.theme.Primary
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -20,16 +21,17 @@ import kotlin.math.roundToInt
 @Composable
 fun AddPerformanceReviewDialog(
     employeeName: String,
+    initialReview: PerformanceReview? = null,
     onDismiss: () -> Unit,
     onSubmit: (Int, Int, Int, Int, Int, String, String, Double) -> Unit
 ) {
-    var quality by remember { mutableFloatStateOf(80f) }
-    var timeliness by remember { mutableFloatStateOf(80f) }
-    var attendance by remember { mutableFloatStateOf(80f) }
-    var communication by remember { mutableFloatStateOf(80f) }
-    var innovation by remember { mutableFloatStateOf(80f) }
-    var comments by remember { mutableStateOf("") }
-    var period by remember { mutableStateOf("") }
+    var quality by remember { mutableFloatStateOf(initialReview?.qualityScore?.toFloat() ?: 80f) }
+    var timeliness by remember { mutableFloatStateOf(initialReview?.timelinessScore?.toFloat() ?: 80f) }
+    var attendance by remember { mutableFloatStateOf(initialReview?.attendanceScore?.toFloat() ?: 80f) }
+    var communication by remember { mutableFloatStateOf(initialReview?.communicationScore?.toFloat() ?: 80f) }
+    var innovation by remember { mutableFloatStateOf(initialReview?.innovationScore?.toFloat() ?: 80f) }
+    var comments by remember { mutableStateOf(initialReview?.remarks ?: "") }
+    var period by remember { mutableStateOf(initialReview?.period ?: "") }
     
     val defaultPeriod = stringResource(R.string.monthly_review)
     LaunchedEffect(Unit) {

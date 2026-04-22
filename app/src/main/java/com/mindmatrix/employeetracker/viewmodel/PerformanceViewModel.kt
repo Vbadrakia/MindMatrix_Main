@@ -34,6 +34,7 @@ class PerformanceViewModel @Inject constructor(
 
     fun loadAllReviews() {
         viewModelScope.launch {
+            performanceRepository.syncPerformanceData()
             _state.value = _state.value.copy(isLoading = true)
             performanceRepository.getAllReviews().collect { reviews ->
                 _state.value = _state.value.copy(

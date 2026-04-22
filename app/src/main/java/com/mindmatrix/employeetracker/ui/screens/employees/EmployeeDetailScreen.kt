@@ -123,6 +123,7 @@ fun EmployeeDetailScreen(
     if (reviewToEdit != null && employee != null) {
         AddPerformanceReviewDialog(
             employeeName = employee.name,
+            initialReview = reviewToEdit,
             onDismiss = { reviewToEdit = null },
             onSubmit = { quality, timeliness, attendance, communication, innovation, comments, period, _ ->
                 val existing = reviewToEdit ?: return@AddPerformanceReviewDialog
