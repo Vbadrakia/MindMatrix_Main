@@ -39,9 +39,9 @@ data class PerformanceReview(
      * Calculates raw and weighted scores based on performance metrics.
      */
     fun withCalculatedScores(): PerformanceReview {
-        val normalizedTimeliness = if (timelinessScore != 0) timelinessScore else productivityScore
-        val normalizedCommunication = if (communicationScore != 0) communicationScore else softSkillsScore
-        val normalizedInnovation = if (innovationScore != 0) innovationScore else teamworkScore
+        val normalizedTimeliness = if (timelinessScore == 0 && productivityScore != 0) productivityScore else timelinessScore
+        val normalizedCommunication = if (communicationScore == 0 && softSkillsScore != 0) softSkillsScore else communicationScore
+        val normalizedInnovation = if (innovationScore == 0 && teamworkScore != 0) teamworkScore else innovationScore
 
         val avg = (qualityScore + normalizedTimeliness + attendanceScore + normalizedCommunication + normalizedInnovation) / 5.0
         return this.copy(

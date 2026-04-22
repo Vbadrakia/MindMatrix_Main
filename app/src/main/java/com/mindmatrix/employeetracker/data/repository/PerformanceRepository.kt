@@ -1,5 +1,6 @@
 package com.mindmatrix.employeetracker.data.repository
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.mindmatrix.employeetracker.data.model.AnalyticsSnapshot
 import com.mindmatrix.employeetracker.data.model.DepartmentAverage
@@ -23,6 +24,10 @@ import javax.inject.Singleton
 class PerformanceRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : IPerformanceRepository {
+    private companion object {
+        const val TAG = "PerformanceRepository"
+    }
+
     private val collection = firestore.collection("performance")
     private val legacyCollection = firestore.collection("performance_reviews")
 
@@ -96,7 +101,8 @@ class PerformanceRepository @Inject constructor(
             PerformanceReview.fromMap(doc.id, doc.data ?: emptyMap())
         }.distinctBy { it.id }
         if (reviews.isNotEmpty()) reviews.map { it.overallRating }.average() else 0.0
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to compute average score for employee $employeeId", e)
         0.0
     }
 
@@ -193,7 +199,8 @@ class PerformanceRepository @Inject constructor(
             topPerformers = leaderboard.take(3),
             lowPerformers = leaderboard.takeLast(3).reversed()
         )
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to load analytics snapshot", e)
         AnalyticsSnapshot()
     }
 
