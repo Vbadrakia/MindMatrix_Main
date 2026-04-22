@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,7 +27,7 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splashScreen = installSplashScreen()
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
@@ -51,12 +50,11 @@ fun MainApp(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Notification Simulation (Observe new notifications)
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
-    
+
     LaunchedEffect(authState.currentEmployee) {
-        authState.currentEmployee?.let { emp ->
-            notificationViewModel.loadNotifications(emp.id)
+        authState.currentEmployee?.let {
+            notificationViewModel.loadNotifications(it.id)
         }
     }
 
@@ -67,84 +65,51 @@ fun MainApp(
             scope.launch {
                 snackbarHostState.showSnackbar(
                     message = "New Message: ${latest.title}",
-                    actionLabel = "View",
-                    duration = SnackbarDuration.Long
+                    actionLabel = "View"
                 )
             }
-            // Mark as read so it doesn't pop up again
             notificationViewModel.markAsRead(latest.id)
         }
     }
 
-    // Global Error Handling via Snackbar
     LaunchedEffect(authState.error) {
-        val error = authState.error
-        if (error != null) {
+        authState.error?.let {
             scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = error,
-                    duration = SnackbarDuration.Short,
-                    withDismissAction = true
-                )
+                snackbarHostState.showSnackbar(it)
             }
         }
     }
 
     if (authState.isLoading) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
         }
         return
     }
 
-    // Determine which nav items to show based on role
     val navItems = when (authState.currentEmployee?.role) {
         com.mindmatrix.employeetracker.data.model.UserRole.ADMIN -> NavigationItems.adminItems
         com.mindmatrix.employeetracker.data.model.UserRole.LEAD -> NavigationItems.leadItems
         else -> NavigationItems.employeeItems
     }
 
-    // Screens where bottom nav should be hidden
-    val showBottomBar = authState.isLoggedIn && currentRoute != Screen.Login.route
-        && currentRoute != Screen.EmployeeDetail.route
-        && currentRoute != Screen.Leaderboard.route
+    val showBottomBar = authState.isLoggedIn && currentRoute !in listOf(
+        Screen.Login.route,
+        Screen.EmployeeDetail.route,
+        Screen.Leaderboard.route
+    )
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 8.dp
-                ) {
-                    for (screen in navItems) {
+                NavigationBar {
+                    navItems.forEach { screen ->
                         val isSelected = currentRoute == screen.route
                         NavigationBarItem(
-                            icon = {
-                                val icon = screen.icon
-                                if (icon != null) {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = screen.title,
-                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            },
-                            label = { 
-                                Text(
-                                    text = screen.title,
-                                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
-                                ) 
-                            },
                             selected = isSelected,
                             onClick = {
-                                if (currentRoute != screen.route) {
+                                if (!isSelected) {
                                     navController.navigate(screen.route) {
                                         popUpTo(Screen.Dashboard.route) { saveState = true }
                                         launchSingleTop = true
@@ -152,28 +117,25 @@ fun MainApp(
                                     }
                                 }
                             },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                            )
+                            icon = {
+                                screen.icon?.let {
+                                    Icon(it, contentDescription = screen.title)
+                                }
+                            },
+                            label = {
+                                Text(
+                                    screen.title,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
                         )
                     }
                 }
             }
         }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            AppNavGraph(
-                navController = navController,
-                authViewModel = authViewModel
-            )
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            AppNavGraph(navController, authViewModel)
         }
     }
 }
