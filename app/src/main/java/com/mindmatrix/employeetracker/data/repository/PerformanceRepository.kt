@@ -1,23 +1,20 @@
 package com.mindmatrix.employeetracker.data.repository
 
-import com.google.firebase.firestore.FirebaseFirestore
+import com.mindmatrix.employeetracker.data.local.dao.EmployeeDao
 import com.mindmatrix.employeetracker.data.local.dao.PerformanceDao
 import com.mindmatrix.employeetracker.data.model.DepartmentAverage
 import com.mindmatrix.employeetracker.data.model.LeaderboardEntry
 import com.mindmatrix.employeetracker.data.model.PerformanceReview
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PerformanceRepository @Inject constructor(
-    private val firestore: FirebaseFirestore,
-    private val performanceDao: PerformanceDao
+    private val performanceDao: PerformanceDao,
+    private val employeeDao: EmployeeDao
 ) : IPerformanceRepository {
-    private val collection = firestore.collection("performance_reviews")
 
     override fun getReviewsForEmployee(employeeId: String): Flow<List<PerformanceReview>> = 
         performanceDao.getReviewsByEmployee(employeeId)
@@ -26,54 +23,38 @@ class PerformanceRepository @Inject constructor(
         performanceDao.getAllReviews()
 
     override suspend fun addReview(review: PerformanceReview): Result<String> = try {
-        val docRef = collection.add(review.toMap()).await()
-        val finalReview = review.copy(id = docRef.id)
+        val timestampedReview = review.copy(lastUpdated = System.currentTimeMillis())
+        val finalReview = timestampedReview.copy(id = review.id.ifBlank { java.util.UUID.randomUUID().toString() })
         performanceDao.insertReview(finalReview)
-        Result.success(docRef.id)
+        Result.success(finalReview.id)
     } catch (e: Exception) {
         Result.failure(e)
     }
 
     override suspend fun updateReview(review: PerformanceReview): Result<Unit> = try {
-        collection.document(review.id).set(review.toMap()).await()
-        performanceDao.updateReview(review)
+        val timestampedReview = review.copy(lastUpdated = System.currentTimeMillis())
+        performanceDao.updateReview(timestampedReview)
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
     }
 
     override suspend fun getAverageScoreForEmployee(employeeId: String): Double = try {
-        val snapshot = collection
-            .whereEqualTo("employeeId", employeeId)
-            .get()
-            .await()
-        val reviews = snapshot.documents.mapNotNull { doc ->
-            (doc.data?.get("weightedScore") as? Number)?.toDouble()
-                ?: (doc.data?.get("overallScore") as? Number)?.toDouble() // Fallback
-        }
+        val reviews = performanceDao.getReviewsByEmployee(employeeId).first().map { it.weightedScore }
         if (reviews.isNotEmpty()) reviews.average() else 0.0
     } catch (e: Exception) {
         0.0
     }
 
     override suspend fun getLeaderboard(): List<LeaderboardEntry> = try {
-        val reviewsSnapshot = collection.get().await()
-        val employeesSnapshot = firestore.collection("employees").get().await()
+        val reviews = performanceDao.getAllReviews().first()
+        val employees = employeeDao.getAllEmployees().first()
+        val employeeMap = employees.associate { it.id to (it.name to it.department) }
 
-        val employeeMap = employeesSnapshot.documents.associate { doc ->
-            doc.id to Pair(
-                doc.data?.get("name") as? String ?: "",
-                doc.data?.get("department") as? String ?: ""
-            )
-        }
-
-        val scoresByEmployee = reviewsSnapshot.documents
-            .groupBy { it.data?.get("employeeId") as? String ?: "" }
+        val scoresByEmployee = reviews
+            .groupBy { it.employeeId }
             .mapValues { (_, docs) ->
-                docs.mapNotNull { 
-                    (it.data?.get("weightedScore") as? Number)?.toDouble()
-                        ?: (it.data?.get("overallScore") as? Number)?.toDouble()
-                }.average()
+                docs.map { it.weightedScore }.average()
             }
 
         scoresByEmployee.entries
@@ -93,28 +74,18 @@ class PerformanceRepository @Inject constructor(
     }
 
     override suspend fun getDepartmentAverages(): List<DepartmentAverage> = try {
-        val reviewsSnapshot = collection.get().await()
-        val employeesSnapshot = firestore.collection("employees").get().await()
-
-        val employeeDeptMap = employeesSnapshot.documents.associate { doc ->
-            doc.id to (doc.data?.get("department") as? String ?: "Unknown")
+        val reviews = performanceDao.getAllReviews().first()
+        val employeeDeptMap = employeeDao.getAllEmployees().first().associate { it.id to it.department }
+        val reviewsByDept = reviews.groupBy { review ->
+            employeeDeptMap[review.employeeId] ?: "Unknown"
         }
 
-        val reviewsByDept = reviewsSnapshot.documents
-            .groupBy { doc ->
-                val empId = doc.data?.get("employeeId") as? String ?: ""
-                employeeDeptMap[empId] ?: "Unknown"
-            }
-
         reviewsByDept.map { (dept, docs) ->
-            val scores = docs.mapNotNull { 
-                (it.data?.get("weightedScore") as? Number)?.toDouble()
-                    ?: (it.data?.get("overallScore") as? Number)?.toDouble()
-            }
+            val scores = docs.map { it.weightedScore }
             DepartmentAverage(
                 department = dept,
                 averageScore = if (scores.isNotEmpty()) scores.average() else 0.0,
-                employeeCount = docs.map { it.data?.get("employeeId") }.distinct().size
+                employeeCount = docs.map { it.employeeId }.distinct().size
             )
         }
     } catch (e: Exception) {
@@ -122,12 +93,7 @@ class PerformanceRepository @Inject constructor(
     }
 
     override suspend fun syncPerformanceData(): Result<Unit> = try {
-        val snapshot = collection.get().await()
-        val reviews = snapshot.documents.map { doc ->
-            PerformanceReview.fromMap(doc.id, doc.data ?: emptyMap())
-        }
-        performanceDao.deleteAllReviews()
-        performanceDao.insertReviews(reviews)
+        // Room-only mode: no remote sync required.
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)

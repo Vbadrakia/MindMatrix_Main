@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">Rastreador de Empleados</string>
+    <string name="login_title">Bienvenido de nuevo</string>
+    <string name="login_subtitle">Inicia sesión para continuar</string>
+    <string name="email_label">Correo electrónico</string>
+    <string name="password_label">Contraseña</string>
+    <string name="sign_in">Iniciar sesión</string>
+    <string name="sign_out">Cerrar sesión</string>
+    <string name="dashboard">Panel</string>
+    <string name="employees">Empleados</string>
+    <string name="tasks">Tareas</string>
+    <string name="attendance">Asistencia</string>
+    <string name="performance">Rendimiento</string>
+    <string name="reports">Reportes</string>
+    <string name="settings">Configuración</string>
+    <string name="leaderboard">Clasificación</string>
+    <string name="loading">Cargando…</string>
+    <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
+    <string name="no_data">No hay datos disponibles</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Eliminar</string>
+    <string name="search">Buscar</string>
+    <string name="add">Agregar</string>
+    <string name="notifications">Notificaciones</string>
+    <string name="admin_dashboard">Panel de administrador</string>
+    <string name="lead_dashboard">Panel de líder</string>
+    <string name="employee_dashboard">Panel del empleado</string>
+</resources>
