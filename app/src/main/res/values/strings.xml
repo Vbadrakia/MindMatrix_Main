@@ -403,4 +403,16 @@
     <string name="lead_role">Lead</string>
     <string name="employee_role">Employee</string>
     <string name="search_icon_desc">Search icon</string>
+    <string name="departments_title">Departments</string>
+    <string name="departments_subtitle">Manage Organization Structure</string>
+    <string name="add_department_desc">Add Department</string>
+    <string name="no_departments_found">No departments found</string>
+    <string name="no_departments_subtitle">Add departments to organize your team.</string>
+    <string name="delete_department_title">Delete Department</string>
+    <string name="delete_department_message">Are you sure you want to delete \"%s\"? Employees assigned to this department will need to be reassigned.</string>
+    <string name="department_head_format">Head: %s</string>
+    <string name="edit_department_title">Edit Department</string>
+    <string name="add_department_title">Add Department</string>
+    <string name="department_name_label">Department Name</string>
+    <string name="none">None</string>
 </resources>

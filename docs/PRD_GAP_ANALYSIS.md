@@ -13,6 +13,8 @@ This pass shifts the project back to Firebase-first persistence (Firestore + Sto
 
 3. **UI logic separation (reports)**
    - Reports filter state and CSV creation remain outside composables (`ReportsViewModel`, `CsvReportBuilder`).
+4. **Screen hardcoded string cleanup (in progress)**
+   - Department screen moved to string resources for title/subtitle/dialog/actions to improve localization readiness.
 
 ## Remaining PRD closure items
 - Expand lifecycle-collection enforcement from screens to any non-screen composables still observing flow state directly.
