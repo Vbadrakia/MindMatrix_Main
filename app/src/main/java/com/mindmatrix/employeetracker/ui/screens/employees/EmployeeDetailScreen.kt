@@ -81,6 +81,8 @@ fun EmployeeDetailScreen(
     val employee = selectedEmployee
     var showReviewDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
+    var reviewToEdit by remember { mutableStateOf<com.mindmatrix.employeetracker.data.model.PerformanceReview?>(null) }
+    var reviewToDelete by remember { mutableStateOf<com.mindmatrix.employeetracker.data.model.PerformanceReview?>(null) }
 
     if (showEditDialog && employee != null) {
         com.mindmatrix.employeetracker.ui.components.AddEmployeeDialog(
@@ -98,21 +100,44 @@ fun EmployeeDetailScreen(
         AddPerformanceReviewDialog(
             employeeName = employee.name,
             onDismiss = { showReviewDialog = false },
-            onSubmit = { quality, productivity, attendance, softSkills, teamwork, comments, period, _ ->
+            onSubmit = { quality, timeliness, attendance, communication, innovation, comments, period, _ ->
                 val review = com.mindmatrix.employeetracker.data.model.PerformanceReview(
                     employeeId = employee.id,
                     reviewerId = currentUser?.id ?: "",
-                    reviewDate = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date()),
+                    date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date()),
                     period = period,
                     qualityScore = quality,
-                    productivityScore = productivity,
+                    timelinessScore = timeliness,
                     attendanceScore = attendance,
-                    softSkillsScore = softSkills,
-                    teamworkScore = teamwork,
-                    comments = comments
+                    communicationScore = communication,
+                    innovationScore = innovation,
+                    comments = comments,
+                    remarks = comments
                 ).withCalculatedScores()
                 performanceViewModel.addReview(review)
                 showReviewDialog = false
+            }
+        )
+    }
+
+    if (reviewToEdit != null && employee != null) {
+        AddPerformanceReviewDialog(
+            employeeName = employee.name,
+            onDismiss = { reviewToEdit = null },
+            onSubmit = { quality, timeliness, attendance, communication, innovation, comments, period, _ ->
+                val existing = reviewToEdit ?: return@AddPerformanceReviewDialog
+                val review = existing.copy(
+                    period = period,
+                    qualityScore = quality,
+                    timelinessScore = timeliness,
+                    attendanceScore = attendance,
+                    communicationScore = communication,
+                    innovationScore = innovation,
+                    comments = comments,
+                    remarks = comments
+                ).withCalculatedScores()
+                performanceViewModel.updateReview(review)
+                reviewToEdit = null
             }
         )
     }
@@ -471,12 +496,17 @@ fun EmployeeDetailScreen(
 
                     items(performanceState.reviews.take(3)) { review ->
                         val canApprove = (isAdmin || (isLead && currentUser?.department == selectedEmployee?.department)) && !isOwnProfile
+                        val canManageReview = isAdmin || (isLead && currentUser?.department == selectedEmployee?.department)
                         PerformanceReviewCard(
                             review = review,
                             showApproveButton = canApprove,
-                            onApprove = { performanceViewModel.approveReview(review.id) }
+                            onApprove = { performanceViewModel.approveReview(review.id) },
+                            onEdit = if (canManageReview) ({ reviewToEdit = review }) else null,
+                            onDelete = if (canManageReview) ({ reviewToDelete = review }) else null
                         )
                     }
+                }
+
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -532,6 +562,27 @@ fun EmployeeDetailScreen(
                     Text(stringResource(R.string.cancel))
                 }
             }
+        )
+    }
+
+    if (reviewToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { reviewToDelete = null },
+            confirmButton = {
+                TextButton(onClick = {
+                    reviewToDelete?.id?.let(performanceViewModel::deleteReview)
+                    reviewToDelete = null
+                }) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { reviewToDelete = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+            title = { Text(stringResource(R.string.delete)) },
+            text = { Text(stringResource(R.string.confirm_delete_review)) }
         )
     }
 }

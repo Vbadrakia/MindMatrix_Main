@@ -296,6 +296,14 @@ fun LoginScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
+            TextButton(onClick = { authViewModel.signInAnonymously() }) {
+                Text(
+                    text = stringResource(R.string.continue_as_guest),
+                    color = Primary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

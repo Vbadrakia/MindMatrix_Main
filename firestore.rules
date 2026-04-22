@@ -1,65 +1,120 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper functions
+
     function isSignedIn() {
       return request.auth != null;
     }
-    
-    function getUserData() {
-      return get(/databases/$(database)/documents/employees/$(request.auth.uid)).data;
-    }
-    
-    function hasRole(role) {
-      return isSignedIn() && getUserData().role == role;
+
+    function isString(v) {
+      return v is string;
     }
 
-    // Employees Collection
+    function isNumber(v) {
+      return v is int || v is float;
+    }
+
+    function validTaskStatus(status) {
+      return status in ['Pending', 'In Progress', 'Completed', 'Reviewed', 'Overdue', 'Cancelled'];
+    }
+
+    function validEmployeeSchema(data) {
+      return data.keys().hasAll(['id', 'name', 'role', 'department', 'joining_date', 'email', 'contact']) &&
+        isString(data.id) &&
+        isString(data.name) &&
+        isString(data.role) &&
+        isString(data.department) &&
+        isString(data.joining_date) &&
+        isString(data.email) &&
+        isString(data.contact);
+    }
+
+    function validTaskSchema(data) {
+      return data.keys().hasAll(['id', 'employee_id', 'description', 'status', 'deadline', 'assigned_date', 'priority']) &&
+        isString(data.id) &&
+        isString(data.employee_id) &&
+        isString(data.description) &&
+        isString(data.status) &&
+        validTaskStatus(data.status) &&
+        isString(data.deadline) &&
+        isString(data.assigned_date) &&
+        isString(data.priority);
+    }
+
+    function validPerformanceSchema(data) {
+      return data.keys().hasAll([
+        'id',
+        'employee_id',
+        'date',
+        'quality_score',
+        'timeliness_score',
+        'attendance_score',
+        'communication_score',
+        'innovation_score',
+        'overall_rating',
+        'remarks'
+      ]) &&
+      isString(data.id) &&
+      isString(data.employee_id) &&
+      isString(data.date) &&
+      isNumber(data.quality_score) &&
+      isNumber(data.timeliness_score) &&
+      isNumber(data.attendance_score) &&
+      isNumber(data.communication_score) &&
+      isNumber(data.innovation_score) &&
+      isNumber(data.overall_rating) &&
+      isString(data.remarks);
+    }
+
+    function validAttendanceSchema(data) {
+      return data.keys().hasAll(['id', 'employee_id', 'date', 'status']) &&
+        isString(data.id) &&
+        isString(data.employee_id) &&
+        isString(data.date) &&
+        isString(data.status);
+    }
+
     match /employees/{employeeId} {
-      allow read: if isSignedIn() && (
-        request.auth.uid == employeeId || 
-        hasRole('ADMIN') || 
-        (hasRole('LEAD') && getUserData().department == resource.data.department)
-      );
-      allow write: if hasRole('ADMIN');
-      allow update: if isSignedIn() && request.auth.uid == employeeId && 
-                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profileImageUrl', 'phone']));
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && validEmployeeSchema(request.resource.data);
+      allow delete: if false;
     }
 
-    // Tasks Collection
     match /tasks/{taskId} {
-      allow read: if isSignedIn() && (
-        resource.data.assignedTo == request.auth.uid || 
-        resource.data.assignedBy == request.auth.uid ||
-        hasRole('ADMIN') ||
-        (hasRole('LEAD') && get(/databases/$(database)/documents/employees/$(resource.data.assignedTo)).data.department == getUserData().department)
-      );
-      allow create: if hasRole('ADMIN') || hasRole('LEAD');
-      allow update: if isSignedIn() && (
-        resource.data.assignedTo == request.auth.uid || 
-        resource.data.assignedBy == request.auth.uid ||
-        hasRole('ADMIN')
-      );
-      allow delete: if hasRole('ADMIN');
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && validTaskSchema(request.resource.data);
+      allow delete: if false;
     }
 
-    // Performance Reviews Collection
-    match /performance_reviews/{reviewId} {
-      allow read: if isSignedIn() && (
-        resource.data.employeeId == request.auth.uid || 
-        hasRole('ADMIN') ||
-        (hasRole('LEAD') && get(/databases/$(database)/documents/employees/$(resource.data.employeeId)).data.department == getUserData().department)
-      );
-      allow create: if hasRole('ADMIN') || hasRole('LEAD');
-      allow update: if hasRole('ADMIN') || (hasRole('LEAD') && resource.data.reviewerId == request.auth.uid);
-      allow delete: if hasRole('ADMIN');
+    match /performance/{reviewId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && validPerformanceSchema(request.resource.data);
+      allow delete: if false;
     }
 
-    // Notifications Collection
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && validAttendanceSchema(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /departments/{departmentId} {
+      allow read, create, update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    match /documents/{documentId} {
+      allow read, create, update: if isSignedIn();
+      allow delete: if false;
+    }
+
     match /notifications/{notificationId} {
-      allow read, update, delete: if isSignedIn() && resource.data.recipientId == request.auth.uid;
-      allow create: if isSignedIn();
+      allow read, create, update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -36,6 +36,20 @@ class AuthViewModel @Inject constructor(
     private fun checkCurrentUser() {
         val firebaseUser = auth.currentUser
         if (firebaseUser != null) {
+            if (firebaseUser.isAnonymous) {
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    isLoggedIn = true,
+                    currentEmployee = Employee(
+                        id = firebaseUser.uid,
+                        name = "Guest User",
+                        email = "",
+                        role = UserRole.EMPLOYEE
+                    ),
+                    error = null
+                )
+                return
+            }
             viewModelScope.launch {
                 _authState.value = _authState.value.copy(isLoading = true)
                 try {
@@ -102,6 +116,31 @@ class AuthViewModel @Inject constructor(
     fun signOut() {
         auth.signOut()
         _authState.value = AuthState()
+    }
+
+    fun signInAnonymously() {
+        viewModelScope.launch {
+            _authState.value = _authState.value.copy(isLoading = true, error = null)
+            auth.signInAnonymously()
+                .addOnSuccessListener { result ->
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        isLoggedIn = true,
+                        currentEmployee = Employee(
+                            id = result.user?.uid ?: "",
+                            name = "Guest User",
+                            email = "",
+                            role = UserRole.EMPLOYEE
+                        )
+                    )
+                }
+                .addOnFailureListener { exception ->
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = exception.localizedMessage ?: "Anonymous authentication failed"
+                    )
+                }
+        }
     }
 
     fun resetPassword(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {

@@ -19,7 +19,6 @@ class AttendanceRepository @Inject constructor(
 
     override fun getAttendanceForEmployee(employeeId: String): Flow<List<AttendanceRecord>> = callbackFlow {
         val listener = collection
-            .whereEqualTo("employeeId", employeeId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -27,7 +26,7 @@ class AttendanceRepository @Inject constructor(
                 }
                 val records = snapshot?.documents?.map { doc ->
                     AttendanceRecord.fromMap(doc.id, doc.data ?: emptyMap())
-                } ?: emptyList()
+                }?.filter { it.employeeId == employeeId } ?: emptyList()
                 trySend(records)
             }
         awaitClose { listener.remove() }
@@ -79,13 +78,10 @@ class AttendanceRepository @Inject constructor(
     }
 
     override suspend fun getAttendanceSummary(employeeId: String): List<StatusCount> = try {
-        val snapshot = collection
-            .whereEqualTo("employeeId", employeeId)
-            .get()
-            .await()
+        val snapshot = collection.get().await()
         val records = snapshot.documents.map { doc ->
             AttendanceRecord.fromMap(doc.id, doc.data ?: emptyMap())
-        }
+        }.filter { it.employeeId == employeeId }
         AttendanceStatus.entries.map { status ->
             StatusCount(
                 status = status,
@@ -97,14 +93,10 @@ class AttendanceRepository @Inject constructor(
     }
 
     override suspend fun getTodayAttendanceForEmployee(employeeId: String, date: String): AttendanceRecord? = try {
-        val snapshot = collection
-            .whereEqualTo("employeeId", employeeId)
-            .whereEqualTo("date", date)
-            .get()
-            .await()
-        snapshot.documents.firstOrNull()?.let { doc ->
-            AttendanceRecord.fromMap(doc.id, doc.data ?: emptyMap())
-        }
+        val snapshot = collection.whereEqualTo("date", date).get().await()
+        snapshot.documents
+            .map { doc -> AttendanceRecord.fromMap(doc.id, doc.data ?: emptyMap()) }
+            .firstOrNull { it.employeeId == employeeId }
     } catch (e: Exception) {
         null
     }

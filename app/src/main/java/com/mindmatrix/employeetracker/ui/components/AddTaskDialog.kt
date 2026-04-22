@@ -202,10 +202,11 @@ fun AddTaskDialog(
                             id = UUID.randomUUID().toString(),
                             title = title,
                             description = description,
-                            assignedTo = assignedToId,
+                            employeeId = assignedToId,
                             status = TaskStatus.PENDING,
                             priority = priority,
-                            dueDate = dueDate
+                            deadline = dueDate,
+                            assignedDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
                         )
                         onSubmit(newTask)
                     }

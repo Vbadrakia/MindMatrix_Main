@@ -7,6 +7,10 @@ import com.mindmatrix.employeetracker.data.repository.IEmployeeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
 import javax.inject.Inject
 
 data class EmployeeListState(
@@ -15,6 +19,8 @@ data class EmployeeListState(
     val isLoading: Boolean = false,
     val searchQuery: String = "",
     val selectedDepartment: String? = null,
+    val startDate: String = "",
+    val endDate: String = "",
     val error: String? = null
 )
 
@@ -31,19 +37,25 @@ class EmployeeViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedDepartment = MutableStateFlow<String?>(null)
+    private val _startDate = MutableStateFlow("")
+    private val _endDate = MutableStateFlow("")
     private val _error = MutableStateFlow<String?>(null)
 
     val state: StateFlow<EmployeeListState> = combine(
         employeeRepository.getAllEmployees(),
         _searchQuery,
         _selectedDepartment,
+        _startDate,
+        _endDate,
         _error
-    ) { employees, query, dept, error ->
+    ) { employees, query, dept, startDate, endDate, error ->
         EmployeeListState(
             employees = employees,
-            filteredEmployees = filterEmployees(employees, query, dept),
+            filteredEmployees = filterEmployees(employees, query, dept, startDate, endDate),
             searchQuery = query,
             selectedDepartment = dept,
+            startDate = startDate,
+            endDate = endDate,
             error = error,
             isLoading = false
         )
@@ -64,14 +76,43 @@ class EmployeeViewModel @Inject constructor(
         _selectedDepartment.value = department
     }
 
-    private fun filterEmployees(employees: List<Employee>, query: String, department: String?): List<Employee> {
+    fun setDateRange(startDate: String, endDate: String) {
+        _startDate.value = startDate
+        _endDate.value = endDate
+    }
+
+    private fun filterEmployees(
+        employees: List<Employee>,
+        query: String,
+        department: String?,
+        startDate: String,
+        endDate: String
+    ): List<Employee> {
+        val start = parseDate(startDate)
+        val end = parseDate(endDate)
         return employees.filter { emp ->
             val matchesQuery = query.isBlank() ||
                 emp.name.contains(query, ignoreCase = true) ||
                 emp.email.contains(query, ignoreCase = true) ||
                 emp.designation.contains(query, ignoreCase = true)
             val matchesDept = department == null || emp.department == department
-            matchesQuery && matchesDept
+            val joiningDate = parseDate(emp.joiningDate)
+            val matchesStart = start == null || (joiningDate != null && !joiningDate.isBefore(start))
+            val matchesEnd = end == null || (joiningDate != null && !joiningDate.isAfter(end))
+            matchesQuery && matchesDept && matchesStart && matchesEnd
+        }
+    }
+
+    private fun parseDate(raw: String?): LocalDate? {
+        if (raw.isNullOrBlank()) return null
+        return try {
+            LocalDate.parse(raw)
+        } catch (_: DateTimeParseException) {
+            try {
+                LocalDate.parse(raw, DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault()))
+            } catch (_: DateTimeParseException) {
+                null
+            }
         }
     }
 

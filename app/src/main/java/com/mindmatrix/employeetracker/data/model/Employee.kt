@@ -29,25 +29,33 @@ data class Employee(
     val role: UserRole = UserRole.EMPLOYEE,
     val department: String = "",
     val designation: String = "",
-    val phone: String = "",
-    val joinDate: String = "",
+    val contact: String = "",
+    val joiningDate: String = "",
     val profileImageUrl: String = "",
     val isActive: Boolean = true,
     val managerId: String = "",
     val badges: List<String> = emptyList(),
     val lastUpdated: Long = System.currentTimeMillis()
 ) {
+    // Backward compatibility alias for old field naming in UI/domain layers.
+    val phone: String get() = contact
+    val joinDate: String get() = joiningDate
+
     /**
      * Convert to a Map for Firestore storage.
      */
     fun toMap(): Map<String, Any?> = mapOf(
+        "id" to id,
         "email" to email,
         "name" to name,
         "role" to role.name,
         "department" to department,
+        "joining_date" to joiningDate,
+        "contact" to contact,
+        // Backward-compatible fields
         "designation" to designation,
-        "phone" to phone,
-        "joinDate" to joinDate,
+        "phone" to contact,
+        "joinDate" to joiningDate,
         "profileImageUrl" to profileImageUrl,
         "isActive" to isActive,
         "managerId" to managerId,
@@ -70,8 +78,8 @@ data class Employee(
             },
             department = map["department"] as? String ?: "",
             designation = map["designation"] as? String ?: "",
-            phone = map["phone"] as? String ?: "",
-            joinDate = map["joinDate"] as? String ?: "",
+            contact = (map["contact"] as? String ?: map["phone"] as? String ?: ""),
+            joiningDate = (map["joining_date"] as? String ?: map["joinDate"] as? String ?: ""),
             profileImageUrl = map["profileImageUrl"] as? String ?: "",
             isActive = map["isActive"] as? Boolean ?: true,
             managerId = map["managerId"] as? String ?: "",

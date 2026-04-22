@@ -151,8 +151,8 @@ fun AddEmployeeDialog(
                             designation = designation,
                             department = department,
                             role = role,
-                            phone = phone,
-                            joinDate = employeeToEdit?.joinDate ?: java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date()),
+                            contact = phone,
+                            joiningDate = employeeToEdit?.joiningDate ?: java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date()),
                             isActive = employeeToEdit?.isActive ?: true,
                             profileImageUrl = employeeToEdit?.profileImageUrl ?: "",
                             managerId = employeeToEdit?.managerId ?: ""

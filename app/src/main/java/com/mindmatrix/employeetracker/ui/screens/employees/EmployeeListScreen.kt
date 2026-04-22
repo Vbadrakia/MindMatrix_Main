@@ -86,6 +86,24 @@ fun EmployeeListScreen(
                 colors = TextFieldDefaults.outlinedTextFieldColors()
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = state.startDate,
+                    onValueChange = { employeeViewModel.setDateRange(it, state.endDate) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Start YYYY-MM-DD") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = state.endDate,
+                    onValueChange = { employeeViewModel.setDateRange(state.startDate, it) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("End YYYY-MM-DD") },
+                    singleLine = true
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             when {

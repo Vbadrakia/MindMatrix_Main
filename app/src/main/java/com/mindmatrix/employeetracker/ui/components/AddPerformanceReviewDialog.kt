@@ -24,10 +24,10 @@ fun AddPerformanceReviewDialog(
     onSubmit: (Int, Int, Int, Int, Int, String, String, Double) -> Unit
 ) {
     var quality by remember { mutableFloatStateOf(80f) }
-    var productivity by remember { mutableFloatStateOf(80f) }
+    var timeliness by remember { mutableFloatStateOf(80f) }
     var attendance by remember { mutableFloatStateOf(80f) }
-    var softSkills by remember { mutableFloatStateOf(80f) }
-    var teamwork by remember { mutableFloatStateOf(80f) }
+    var communication by remember { mutableFloatStateOf(80f) }
+    var innovation by remember { mutableFloatStateOf(80f) }
     var comments by remember { mutableStateOf("") }
     var period by remember { mutableStateOf("") }
     
@@ -36,8 +36,8 @@ fun AddPerformanceReviewDialog(
         if (period.isEmpty()) period = defaultPeriod
     }
 
-    val overallScore = remember(quality, productivity, attendance, softSkills, teamwork) {
-        (quality + productivity + attendance + softSkills + teamwork) / 5.0
+    val overallScore = remember(quality, timeliness, attendance, communication, innovation) {
+        (quality + timeliness + attendance + communication + innovation) / 5.0
     }
 
     AlertDialog(
@@ -68,10 +68,10 @@ fun AddPerformanceReviewDialog(
                 HorizontalDivider()
 
                 ScoreSliderItem(label = stringResource(R.string.quality_of_work), score = quality, onScoreChange = { quality = it })
-                ScoreSliderItem(label = stringResource(R.string.productivity), score = productivity, onScoreChange = { productivity = it })
+                ScoreSliderItem(label = stringResource(R.string.filter_timeliness), score = timeliness, onScoreChange = { timeliness = it })
                 ScoreSliderItem(label = stringResource(R.string.attendance), score = attendance, onScoreChange = { attendance = it })
-                ScoreSliderItem(label = stringResource(R.string.soft_skills), score = softSkills, onScoreChange = { softSkills = it })
-                ScoreSliderItem(label = stringResource(R.string.teamwork), score = teamwork, onScoreChange = { teamwork = it })
+                ScoreSliderItem(label = stringResource(R.string.filter_communication), score = communication, onScoreChange = { communication = it })
+                ScoreSliderItem(label = stringResource(R.string.filter_innovation), score = innovation, onScoreChange = { innovation = it })
 
                 HorizontalDivider()
 
@@ -116,10 +116,10 @@ fun AddPerformanceReviewDialog(
                 onClick = {
                     onSubmit(
                         quality.roundToInt(),
-                        productivity.roundToInt(),
+                        timeliness.roundToInt(),
                         attendance.roundToInt(),
-                        softSkills.roundToInt(),
-                        teamwork.roundToInt(),
+                        communication.roundToInt(),
+                        innovation.roundToInt(),
                         comments,
                         period,
                         overallScore

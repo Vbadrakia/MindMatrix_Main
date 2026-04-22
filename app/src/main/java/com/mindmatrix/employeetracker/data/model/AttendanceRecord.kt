@@ -20,11 +20,14 @@ data class AttendanceRecord(
     val notes: String = ""
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
-        "employeeId" to employeeId,
+        "id" to id,
+        "employee_id" to employeeId,
         "date" to date,
+        "status" to status.name,
+        // Backward compatibility fields.
+        "employeeId" to employeeId,
         "checkInTime" to checkInTime,
         "checkOutTime" to checkOutTime,
-        "status" to status.name,
         "hoursWorked" to hoursWorked,
         "notes" to notes
     )
@@ -32,7 +35,7 @@ data class AttendanceRecord(
     companion object {
         fun fromMap(id: String, map: Map<String, Any?>): AttendanceRecord = AttendanceRecord(
             id = id,
-            employeeId = map["employeeId"] as? String ?: "",
+            employeeId = (map["employee_id"] as? String ?: map["employeeId"] as? String ?: ""),
             date = map["date"] as? String ?: "",
             checkInTime = map["checkInTime"] as? String ?: "",
             checkOutTime = map["checkOutTime"] as? String ?: "",

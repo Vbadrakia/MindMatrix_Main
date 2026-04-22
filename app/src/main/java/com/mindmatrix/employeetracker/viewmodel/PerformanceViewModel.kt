@@ -2,6 +2,7 @@ package com.mindmatrix.employeetracker.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mindmatrix.employeetracker.data.model.AnalyticsSnapshot
 import com.mindmatrix.employeetracker.data.model.DepartmentAverage
 import com.mindmatrix.employeetracker.data.model.LeaderboardEntry
 import com.mindmatrix.employeetracker.data.model.PerformanceReview
@@ -18,6 +19,7 @@ data class PerformanceState(
     val averageScore: Double = 0.0,
     val leaderboard: List<LeaderboardEntry> = emptyList(),
     val departmentAverages: List<DepartmentAverage> = emptyList(),
+    val analytics: AnalyticsSnapshot = AnalyticsSnapshot(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -32,7 +34,6 @@ class PerformanceViewModel @Inject constructor(
 
     fun loadAllReviews() {
         viewModelScope.launch {
-            performanceRepository.syncPerformanceData()
             _state.value = _state.value.copy(isLoading = true)
             performanceRepository.getAllReviews().collect { reviews ->
                 _state.value = _state.value.copy(
@@ -65,7 +66,7 @@ class PerformanceViewModel @Inject constructor(
     fun loadLeaderboard() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
-            val leaderboard = performanceRepository.getLeaderboard()
+            val leaderboard = performanceRepository.getLeaderboard().sortedByDescending { it.averageScore }
             _state.value = _state.value.copy(
                 leaderboard = leaderboard,
                 isLoading = false
@@ -80,6 +81,23 @@ class PerformanceViewModel @Inject constructor(
         }
     }
 
+    fun loadAnalytics(
+        department: String? = null,
+        startDate: String? = null,
+        endDate: String? = null
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
+            val snapshot = performanceRepository.getAnalyticsSnapshot(department, startDate, endDate)
+            _state.value = _state.value.copy(
+                analytics = snapshot,
+                departmentAverages = snapshot.departmentDistribution,
+                leaderboard = (snapshot.topPerformers + snapshot.lowPerformers).distinctBy { it.employeeId },
+                isLoading = false
+            )
+        }
+    }
+
     fun addReview(review: PerformanceReview) {
         viewModelScope.launch {
             performanceRepository.addReview(review).onFailure { e ->
@@ -91,6 +109,14 @@ class PerformanceViewModel @Inject constructor(
     fun updateReview(review: PerformanceReview) {
         viewModelScope.launch {
             performanceRepository.updateReview(review).onFailure { e ->
+                _state.value = _state.value.copy(error = e.message)
+            }
+        }
+    }
+
+    fun deleteReview(reviewId: String) {
+        viewModelScope.launch {
+            performanceRepository.deleteReview(reviewId).onFailure { e ->
                 _state.value = _state.value.copy(error = e.message)
             }
         }

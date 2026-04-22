@@ -21,3 +21,23 @@ data class LeaderboardEntry(
     val averageScore: Double = 0.0,
     val rank: Int = 0
 )
+
+data class EmployeeRatingPoint(
+    val employeeId: String = "",
+    val employeeName: String = "",
+    val department: String = "",
+    val averageRating: Double = 0.0
+)
+
+data class MonthlyTrendPoint(
+    val month: String = "",
+    val averageRating: Double = 0.0
+)
+
+data class AnalyticsSnapshot(
+    val employeeAverages: List<EmployeeRatingPoint> = emptyList(),
+    val departmentDistribution: List<DepartmentAverage> = emptyList(),
+    val monthlyTrend: List<MonthlyTrendPoint> = emptyList(),
+    val topPerformers: List<LeaderboardEntry> = emptyList(),
+    val lowPerformers: List<LeaderboardEntry> = emptyList()
+)

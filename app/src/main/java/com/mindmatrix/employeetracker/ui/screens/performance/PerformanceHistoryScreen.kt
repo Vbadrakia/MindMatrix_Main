@@ -151,11 +151,12 @@ fun PerformanceHistoryScreen(
 }
 
 @Composable
-@Composable
 fun PerformanceReviewCard(
     review: com.mindmatrix.employeetracker.data.model.PerformanceReview,
     showApproveButton: Boolean = false,
-    onApprove: () -> Unit = {}
+    onApprove: () -> Unit = {},
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -201,22 +202,40 @@ fun PerformanceReviewCard(
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (onEdit != null) {
+                        IconButton(onClick = onEdit) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.edit),
+                                tint = OnSurfaceVariant
+                            )
+                        }
+                    }
+                    if (onDelete != null) {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete),
+                                tint = Error
+                            )
+                        }
+                    }
                     Surface(
                         color = when {
-                            review.weightedScore >= 80 -> Success.copy(alpha = 0.1f)
-                            review.weightedScore >= 60 -> Primary.copy(alpha = 0.1f)
+                            review.overallRating >= 80 -> Success.copy(alpha = 0.1f)
+                            review.overallRating >= 60 -> Primary.copy(alpha = 0.1f)
                             else -> PriorityMedium.copy(alpha = 0.1f)
                         },
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = "${review.weightedScore.toInt()}/100",
+                            text = "${review.overallRating.toInt()}/100",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                             color = when {
-                                review.weightedScore >= 80 -> Success
-                                review.weightedScore >= 60 -> Primary
+                                review.overallRating >= 80 -> Success
+                                review.overallRating >= 60 -> Primary
                                 else -> PriorityMedium
                             }
                         )
@@ -228,11 +247,11 @@ fun PerformanceReviewCard(
 
             // Score breakdown with progress bars
             val breakdownItems = listOf(
-                Triple(stringResource(R.string.productivity), review.productivityScore.toFloat(), Success),
+                Triple(stringResource(R.string.filter_timeliness), review.timelinessScore.toFloat(), Success),
                 Triple(stringResource(R.string.quality), review.qualityScore.toFloat(), Primary),
                 Triple(stringResource(R.string.attendance), review.attendanceScore.toFloat(), Tertiary),
-                Triple(stringResource(R.string.teamwork), review.teamworkScore.toFloat(), SecondaryDark),
-                Triple(stringResource(R.string.soft_skills), review.softSkillsScore.toFloat(), PriorityMedium)
+                Triple(stringResource(R.string.filter_communication), review.communicationScore.toFloat(), SecondaryDark),
+                Triple(stringResource(R.string.filter_innovation), review.innovationScore.toFloat(), PriorityMedium)
             )
 
             breakdownItems.forEach { (label, score, color) ->

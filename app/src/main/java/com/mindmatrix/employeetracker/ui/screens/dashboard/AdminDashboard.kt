@@ -60,6 +60,8 @@ fun AdminDashboardScreen(
             performanceViewModel.loadDepartmentAverages()
         }
         performanceViewModel.loadLeaderboard()
+        performanceViewModel.loadAnalytics()
+        performanceViewModel.loadAllReviews()
     }
 
     val isRefreshing by taskViewModel.isRefreshing.collectAsStateWithLifecycle()
@@ -73,6 +75,7 @@ fun AdminDashboardScreen(
                 employeeViewModel.searchEmployees("") // reload all
             }
             performanceViewModel.loadLeaderboard()
+            performanceViewModel.loadAnalytics()
         }
     )
 
@@ -147,25 +150,44 @@ fun AdminDashboardScreen(
             }
 
             item {
+                val completedTasks = taskState.tasks.count {
+                    it.status == com.mindmatrix.employeetracker.data.model.TaskStatus.COMPLETED ||
+                            it.status == com.mindmatrix.employeetracker.data.model.TaskStatus.REVIEWED
+                }
+                val completionRate = if (taskState.tasks.isNotEmpty()) {
+                    (completedTasks * 100 / taskState.tasks.size)
+                } else 0
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     AdminStatCard(
                         label = stringResource(R.string.active_tasks),
-                        value = taskState.tasks.count { it.status != com.mindmatrix.employeetracker.data.model.TaskStatus.COMPLETED && it.status != com.mindmatrix.employeetracker.data.model.TaskStatus.REVIEWED }.toString(),
+                        value = taskState.tasks.size.toString(),
                         subtext = stringResource(R.string.across_all_teams),
                         onClick = onNavigateToTasks,
                         modifier = Modifier.weight(1f)
                     )
                     AdminStatCard(
-                        label = stringResource(R.string.avg_performance),
-                        value = String.format(Locale.getDefault(), "%.1f", performanceState.averageScore),
+                        label = stringResource(R.string.completion),
+                        value = "$completionRate%",
                         isRating = false,
                         onClick = onNavigateToReports,
                         modifier = Modifier.weight(1f)
                     )
                 }
+            }
+
+            item {
+                val top = performanceState.analytics.topPerformers.firstOrNull()
+                val orgAverage = performanceState.analytics.employeeAverages.map { it.averageRating }.average().takeIf { !it.isNaN() } ?: 0.0
+                AdminStatCard(
+                    label = stringResource(R.string.avg_performance),
+                    value = String.format(Locale.getDefault(), "%.1f", orgAverage),
+                    subtext = top?.let { "${stringResource(R.string.top_performer)}: ${it.employeeName}" } ?: "",
+                    onClick = onNavigateToReports,
+                    isRating = true
+                )
             }
 
             // Top Performers Section

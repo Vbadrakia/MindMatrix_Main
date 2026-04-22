@@ -83,12 +83,12 @@ class SampleDataGenerator @Inject constructor(
                 val task = Task(
                     title = "${pool.random()} #$i",
                     description = "Crucial task for ${employee.name} to support ${employee.department} objectives for the month.",
-                    assignedTo = employee.id,
+                    employeeId = employee.id,
                     assignedBy = employee.managerId.ifEmpty { adminId },
                     status = status,
                     priority = TaskPriority.entries.random(),
-                    createdAt = createdDate.format(dateFormatter),
-                    dueDate = createdDate.plusDays(Random.nextLong(2, 10)).format(dateFormatter),
+                    assignedDate = createdDate.format(dateFormatter),
+                    deadline = createdDate.plusDays(Random.nextLong(2, 10)).format(dateFormatter),
                     completedAt = if (completed) createdDate.plusDays(Random.nextLong(1, 5)).format(dateFormatter) else ""
                 )
                 taskRepository.addTask(task)
@@ -131,8 +131,8 @@ class SampleDataGenerator @Inject constructor(
                 role = UserRole.ADMIN,
                 department = "Management",
                 designation = "System Administrator",
-                phone = "+1234567890",
-                joinDate = "2023-01-01"
+                contact = "+1234567890",
+                joiningDate = "2023-01-01"
             ),
             Employee(
                 id = "lead_1",
@@ -141,8 +141,8 @@ class SampleDataGenerator @Inject constructor(
                 role = UserRole.LEAD,
                 department = "Engineering",
                 designation = "Senior Lead Engineer",
-                phone = "+1234567891",
-                joinDate = "2023-03-15",
+                contact = "+1234567891",
+                joiningDate = "2023-03-15",
                 managerId = "admin_id"
             ),
             Employee(
@@ -152,8 +152,8 @@ class SampleDataGenerator @Inject constructor(
                 role = UserRole.LEAD,
                 department = "Design",
                 designation = "Creative Director",
-                phone = "+1234567893",
-                joinDate = "2023-02-10",
+                contact = "+1234567893",
+                joiningDate = "2023-02-10",
                 managerId = "admin_id"
             ),
             Employee(
@@ -163,8 +163,8 @@ class SampleDataGenerator @Inject constructor(
                 role = UserRole.EMPLOYEE,
                 department = "Engineering",
                 designation = "Software Engineer",
-                phone = "+1234567892",
-                joinDate = "2023-06-20",
+                contact = "+1234567892",
+                joiningDate = "2023-06-20",
                 managerId = "lead_1"
             ),
             Employee(
@@ -174,8 +174,8 @@ class SampleDataGenerator @Inject constructor(
                 role = UserRole.EMPLOYEE,
                 department = "Engineering",
                 designation = "Frontend Developer",
-                phone = "+1234567894",
-                joinDate = "2023-08-05",
+                contact = "+1234567894",
+                joiningDate = "2023-08-05",
                 managerId = "lead_1"
             ),
             Employee(
@@ -185,8 +185,8 @@ class SampleDataGenerator @Inject constructor(
                 role = UserRole.EMPLOYEE,
                 department = "Design",
                 designation = "UI/UX Designer",
-                phone = "+1234567895",
-                joinDate = "2023-09-12",
+                contact = "+1234567895",
+                joiningDate = "2023-09-12",
                 managerId = "lead_2"
             ),
             Employee(
@@ -196,8 +196,8 @@ class SampleDataGenerator @Inject constructor(
                 role = UserRole.EMPLOYEE,
                 department = "Marketing",
                 designation = "Content Specialist",
-                phone = "+1234567896",
-                joinDate = "2023-11-30",
+                contact = "+1234567896",
+                joiningDate = "2023-11-30",
                 managerId = "admin_id"
             ),
             Employee(
@@ -207,8 +207,8 @@ class SampleDataGenerator @Inject constructor(
                 role = UserRole.EMPLOYEE,
                 department = "Engineering",
                 designation = "Backend Engineer",
-                phone = "+1234567897",
-                joinDate = "2024-01-15",
+                contact = "+1234567897",
+                joiningDate = "2024-01-15",
                 managerId = "lead_1"
             )
         )

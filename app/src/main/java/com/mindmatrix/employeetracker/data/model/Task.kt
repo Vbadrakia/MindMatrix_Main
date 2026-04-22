@@ -10,34 +10,44 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "tasks",
-    indices = [Index(value = ["assignedTo"]), Index(value = ["status"])]
+    indices = [Index(value = ["employeeId"]), Index(value = ["status"])]
 )
 data class Task(
     @PrimaryKey
     val id: String = "",
     val title: String = "",
     val description: String = "",
-    val assignedTo: String = "",
+    val employeeId: String = "",
     val assignedBy: String = "",
     val status: TaskStatus = TaskStatus.PENDING,
     val priority: TaskPriority = TaskPriority.MEDIUM,
-    val dueDate: String = "",
-    val createdAt: String = "",
+    val deadline: String = "",
+    val assignedDate: String = "",
     val completedAt: String = "",
     val comments: String = "",
     val attachments: List<String> = emptyList(),
     val isPersonalGoal: Boolean = false,
     val lastUpdated: Long = System.currentTimeMillis()
 ) {
+    // Backward compatibility aliases for legacy UI references.
+    val assignedTo: String get() = employeeId
+    val dueDate: String get() = deadline
+    val createdAt: String get() = assignedDate
+
     fun toMap(): Map<String, Any?> = mapOf(
+        "id" to id,
         "title" to title,
         "description" to description,
-        "assignedTo" to assignedTo,
+        "employee_id" to employeeId,
         "assignedBy" to assignedBy,
-        "status" to status.name,
+        "status" to status.firestoreValue,
         "priority" to priority.name,
-        "dueDate" to dueDate,
-        "createdAt" to createdAt,
+        "deadline" to deadline,
+        "assigned_date" to assignedDate,
+        // Backward-compatible fields
+        "assignedTo" to employeeId,
+        "dueDate" to deadline,
+        "createdAt" to assignedDate,
         "completedAt" to completedAt,
         "comments" to comments,
         "attachments" to attachments,
@@ -50,20 +60,16 @@ data class Task(
             id = id,
             title = map["title"] as? String ?: "",
             description = map["description"] as? String ?: "",
-            assignedTo = map["assignedTo"] as? String ?: "",
+            employeeId = (map["employee_id"] as? String ?: map["assignedTo"] as? String ?: ""),
             assignedBy = map["assignedBy"] as? String ?: "",
-            status = try {
-                TaskStatus.valueOf(map["status"] as? String ?: "PENDING")
-            } catch (_: Exception) {
-                TaskStatus.PENDING
-            },
+            status = TaskStatus.fromFirestore(map["status"] as? String),
             priority = try {
                 TaskPriority.valueOf(map["priority"] as? String ?: "MEDIUM")
             } catch (_: Exception) {
                 TaskPriority.MEDIUM
             },
-            dueDate = map["dueDate"] as? String ?: "",
-            createdAt = map["createdAt"] as? String ?: "",
+            deadline = (map["deadline"] as? String ?: map["dueDate"] as? String ?: ""),
+            assignedDate = (map["assigned_date"] as? String ?: map["createdAt"] as? String ?: ""),
             completedAt = map["completedAt"] as? String ?: "",
             comments = map["comments"] as? String ?: "",
             attachments = @Suppress("UNCHECKED_CAST") (map["attachments"] as? List<String> ?: emptyList()),
@@ -79,7 +85,29 @@ enum class TaskStatus {
     COMPLETED,
     REVIEWED,
     OVERDUE,
-    CANCELLED
+    CANCELLED;
+
+    val firestoreValue: String
+        get() = when (this) {
+            PENDING -> "Pending"
+            IN_PROGRESS -> "In Progress"
+            COMPLETED -> "Completed"
+            REVIEWED -> "Reviewed"
+            OVERDUE -> "Overdue"
+            CANCELLED -> "Cancelled"
+        }
+
+    companion object {
+        fun fromFirestore(value: String?): TaskStatus = when (value?.trim()) {
+            "Pending", "PENDING" -> PENDING
+            "In Progress", "IN_PROGRESS" -> IN_PROGRESS
+            "Completed", "COMPLETED" -> COMPLETED
+            "Reviewed", "REVIEWED" -> REVIEWED
+            "Overdue", "OVERDUE" -> OVERDUE
+            "Cancelled", "CANCELLED" -> CANCELLED
+            else -> PENDING
+        }
+    }
 }
 
 enum class TaskPriority {

@@ -12,7 +12,7 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE id = :id")
     fun getTaskById(id: String): Flow<Task?>
 
-    @Query("SELECT * FROM tasks WHERE assignedTo = :employeeId")
+    @Query("SELECT * FROM tasks WHERE employeeId = :employeeId")
     fun getTasksByEmployee(employeeId: String): Flow<List<Task>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

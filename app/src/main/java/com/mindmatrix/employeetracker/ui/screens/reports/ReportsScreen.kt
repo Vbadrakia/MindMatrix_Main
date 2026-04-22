@@ -53,16 +53,34 @@ fun ReportsScreen(
     val context = LocalContext.current
     val currentEmployee = authState.currentEmployee
     val isAdmin = currentEmployee?.role == UserRole.ADMIN
+    val isLead = currentEmployee?.role == UserRole.LEAD
 
     var selectedDeptFilter by remember { mutableStateOf<String?>(null) }
     var selectedCategoryFilter by remember { mutableStateOf<String?>("Overall") }
     var selectedTimeRange by remember { mutableStateOf("Monthly") }
+    var startDate by remember { mutableStateOf("") }
+    var endDate by remember { mutableStateOf("") }
 
     LaunchedEffect(currentEmployee) {
         if (isAdmin || currentEmployee?.role == UserRole.LEAD) {
             performanceViewModel.loadDepartmentAverages()
             performanceViewModel.loadLeaderboard()
             performanceViewModel.loadAllReviews()
+            performanceViewModel.loadAnalytics(
+                department = selectedDeptFilter ?: currentEmployee?.department,
+                startDate = startDate.ifBlank { null },
+                endDate = endDate.ifBlank { null }
+            )
+        }
+    }
+
+    LaunchedEffect(selectedDeptFilter, startDate, endDate) {
+        if (isAdmin || isLead) {
+            performanceViewModel.loadAnalytics(
+                department = selectedDeptFilter ?: if (isLead) currentEmployee?.department else null,
+                startDate = startDate.ifBlank { null },
+                endDate = endDate.ifBlank { null }
+            )
         }
     }
 
@@ -86,24 +104,31 @@ fun ReportsScreen(
                 FloatingActionButton(
                     onClick = {
                         val csvData = StringBuilder()
-                        // Header
-                        csvData.append("Employee ID,Employee Name,Department,Average Score,Rank,Category,Date\n")
-                        
-                        val leaderboardToExport = if (isAdmin) {
-                            performanceState.leaderboard
-                        } else {
-                            performanceState.leaderboard.filter { it.department == currentEmployee?.department }
-                        }
+                        csvData.append("employee_id,employee_name,department,email,contact,joining_date,average_rating,task_total,task_completed,task_completion_percentage\\n")
 
-                        leaderboardToExport.forEach { entry ->
-                            val employee = employeeState.employees.find { it.name == entry.employeeName }
-                            csvData.append("${employee?.id ?: "N/A"},")
-                            csvData.append("${entry.employeeName},")
-                            csvData.append("${entry.department},")
-                            csvData.append("${String.format(Locale.getDefault(), "%.2f", entry.averageScore)},")
-                            csvData.append("${entry.rank},")
-                            csvData.append("${selectedCategoryFilter ?: stringResource(R.string.filter_overall)},")
-                            csvData.append("${java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())}\n")
+                        val exportEmployees = if (isAdmin) {
+                            employeeState.employees.filter { selectedDeptFilter == null || it.department == selectedDeptFilter }
+                        } else {
+                            employeeState.employees.filter { it.department == currentEmployee?.department }
+                        }
+                        val avgByEmployee = performanceState.analytics.employeeAverages.associateBy { it.employeeId }
+
+                        exportEmployees.forEach { employee ->
+                            val employeeTasks = taskState.tasks.filter { it.employeeId == employee.id }
+                            val completed = employeeTasks.count { it.status == TaskStatus.COMPLETED || it.status == TaskStatus.REVIEWED }
+                            val completion = if (employeeTasks.isNotEmpty()) (completed * 100.0 / employeeTasks.size) else 0.0
+                            val average = avgByEmployee[employee.id]?.averageRating ?: 0.0
+
+                            csvData.append("${employee.id},")
+                            csvData.append("${employee.name},")
+                            csvData.append("${employee.department},")
+                            csvData.append("${employee.email},")
+                            csvData.append("${employee.contact},")
+                            csvData.append("${employee.joiningDate},")
+                            csvData.append("${String.format(Locale.getDefault(), "%.2f", average)},")
+                            csvData.append("${employeeTasks.size},")
+                            csvData.append("$completed,")
+                            csvData.append("${String.format(Locale.getDefault(), "%.2f", completion)}\\n")
                         }
                         
                         try {
@@ -219,6 +244,28 @@ fun ReportsScreen(
                                 label = { Text(range) }
                             )
                         }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = startDate,
+                            onValueChange = { startDate = it },
+                            modifier = Modifier.weight(1f),
+                            label = { Text(stringResource(R.string.start_date_iso)) },
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = endDate,
+                            onValueChange = { endDate = it },
+                            modifier = Modifier.weight(1f),
+                            label = { Text(stringResource(R.string.end_date_iso)) },
+                            singleLine = true
+                        )
                     }
                 }
 

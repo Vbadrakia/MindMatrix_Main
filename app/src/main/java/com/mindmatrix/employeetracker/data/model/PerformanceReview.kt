@@ -12,12 +12,19 @@ data class PerformanceReview(
     @PrimaryKey
     val id: String = "",
     val employeeId: String = "",
-    val reviewerId: String = "",
-    val reviewDate: String = "",
-    val period: String = "",
+    val date: String = "",
     val qualityScore: Int = 0,
-    val productivityScore: Int = 0,
+    val timelinessScore: Int = 0,
     val attendanceScore: Int = 0,
+    val communicationScore: Int = 0,
+    val innovationScore: Int = 0,
+    val overallRating: Double = 0.0,
+    val remarks: String = "",
+    // Backward-compatible fields currently used in app flows.
+    val reviewerId: String = "",
+    val period: String = "",
+    val reviewDate: String = "",
+    val productivityScore: Int = 0,
     val softSkillsScore: Int = 0,
     val teamworkScore: Int = 0,
     val rawScore: Double = 0.0,
@@ -32,35 +39,47 @@ data class PerformanceReview(
      * Calculates raw and weighted scores based on performance metrics.
      */
     fun withCalculatedScores(): PerformanceReview {
-        val raw = (qualityScore + productivityScore + attendanceScore + softSkillsScore + teamworkScore).toDouble() / 5.0
-        
-        // quality * 0.30 + timeliness * 0.25 + attendance * 0.15 + communication * 0.15 + innovation * 0.15
-        val weighted = (qualityScore * 0.30) +
-                (productivityScore * 0.25) +
-                (attendanceScore * 0.15) +
-                (softSkillsScore * 0.15) +
-                (teamworkScore * 0.15)
-        
+        val normalizedTimeliness = if (timelinessScore != 0) timelinessScore else productivityScore
+        val normalizedCommunication = if (communicationScore != 0) communicationScore else softSkillsScore
+        val normalizedInnovation = if (innovationScore != 0) innovationScore else teamworkScore
+
+        val avg = (qualityScore + normalizedTimeliness + attendanceScore + normalizedCommunication + normalizedInnovation) / 5.0
         return this.copy(
-            rawScore = raw,
-            weightedScore = weighted
+            date = if (date.isNotBlank()) date else reviewDate,
+            reviewDate = if (reviewDate.isNotBlank()) reviewDate else date,
+            timelinessScore = normalizedTimeliness,
+            communicationScore = normalizedCommunication,
+            innovationScore = normalizedInnovation,
+            overallRating = avg,
+            rawScore = avg,
+            weightedScore = avg
         )
     }
 
     fun toMap(): Map<String, Any?> = mapOf(
+        "id" to id,
+        "employee_id" to employeeId,
+        "date" to date.ifBlank { reviewDate },
+        "quality_score" to qualityScore,
+        "timeliness_score" to timelinessScore,
+        "attendance_score" to attendanceScore,
+        "communication_score" to communicationScore,
+        "innovation_score" to innovationScore,
+        "overall_rating" to overallRating,
+        "remarks" to remarks.ifBlank { comments },
+        // Backward-compatible fields
         "employeeId" to employeeId,
         "reviewerId" to reviewerId,
-        "reviewDate" to reviewDate,
+        "reviewDate" to reviewDate.ifBlank { date },
         "period" to period,
-        "qualityScore" to qualityScore,
-        "productivityScore" to productivityScore,
+        "productivityScore" to timelinessScore,
         "attendanceScore" to attendanceScore,
-        "softSkillsScore" to softSkillsScore,
-        "teamworkScore" to teamworkScore,
-        "rawScore" to rawScore,
-        "weightedScore" to weightedScore,
+        "softSkillsScore" to communicationScore,
+        "teamworkScore" to innovationScore,
+        "rawScore" to overallRating,
+        "weightedScore" to overallRating,
         "status" to status.name,
-        "comments" to comments,
+        "comments" to remarks.ifBlank { comments },
         "goals" to goals,
         "strengths" to strengths,
         "areasForImprovement" to areasForImprovement
@@ -69,27 +88,46 @@ data class PerformanceReview(
     companion object {
         fun fromMap(id: String, map: Map<String, Any?>): PerformanceReview = PerformanceReview(
             id = id,
-            employeeId = map["employeeId"] as? String ?: "",
+            employeeId = (map["employee_id"] as? String ?: map["employeeId"] as? String ?: ""),
+            date = (map["date"] as? String ?: map["reviewDate"] as? String ?: ""),
+            qualityScore = (map["quality_score"] as? Number)?.toInt()
+                ?: (map["qualityScore"] as? Number)?.toInt() ?: 0,
+            timelinessScore = (map["timeliness_score"] as? Number)?.toInt()
+                ?: (map["productivityScore"] as? Number)?.toInt() ?: 0,
+            attendanceScore = (map["attendance_score"] as? Number)?.toInt()
+                ?: (map["attendanceScore"] as? Number)?.toInt() ?: 0,
+            communicationScore = (map["communication_score"] as? Number)?.toInt()
+                ?: (map["softSkillsScore"] as? Number)?.toInt() ?: 0,
+            innovationScore = (map["innovation_score"] as? Number)?.toInt()
+                ?: (map["teamworkScore"] as? Number)?.toInt() ?: 0,
+            overallRating = (map["overall_rating"] as? Number)?.toDouble()
+                ?: (map["weightedScore"] as? Number)?.toDouble()
+                ?: (map["rawScore"] as? Number)?.toDouble()
+                ?: 0.0,
+            remarks = (map["remarks"] as? String ?: map["comments"] as? String ?: ""),
             reviewerId = map["reviewerId"] as? String ?: "",
-            reviewDate = map["reviewDate"] as? String ?: "",
+            reviewDate = (map["reviewDate"] as? String ?: map["date"] as? String ?: ""),
             period = map["period"] as? String ?: "",
-            qualityScore = (map["qualityScore"] as? Number)?.toInt() ?: 0,
-            productivityScore = (map["productivityScore"] as? Number)?.toInt() ?: 0,
-            attendanceScore = (map["attendanceScore"] as? Number)?.toInt() ?: 0,
-            softSkillsScore = (map["softSkillsScore"] as? Number)?.toInt() ?: 0,
-            teamworkScore = (map["teamworkScore"] as? Number)?.toInt() ?: 0,
-            rawScore = (map["rawScore"] as? Number)?.toDouble() ?: 0.0,
-            weightedScore = (map["weightedScore"] as? Number)?.toDouble() ?: 0.0,
+            productivityScore = (map["productivityScore"] as? Number)?.toInt()
+                ?: (map["timeliness_score"] as? Number)?.toInt() ?: 0,
+            softSkillsScore = (map["softSkillsScore"] as? Number)?.toInt()
+                ?: (map["communication_score"] as? Number)?.toInt() ?: 0,
+            teamworkScore = (map["teamworkScore"] as? Number)?.toInt()
+                ?: (map["innovation_score"] as? Number)?.toInt() ?: 0,
+            rawScore = (map["rawScore"] as? Number)?.toDouble()
+                ?: (map["overall_rating"] as? Number)?.toDouble() ?: 0.0,
+            weightedScore = (map["weightedScore"] as? Number)?.toDouble()
+                ?: (map["overall_rating"] as? Number)?.toDouble() ?: 0.0,
             status = try {
                 ReviewStatus.valueOf(map["status"] as? String ?: "APPROVED")
             } catch (_: Exception) {
                 ReviewStatus.APPROVED
             },
-            comments = map["comments"] as? String ?: "",
+            comments = (map["comments"] as? String ?: map["remarks"] as? String ?: ""),
             goals = map["goals"] as? String ?: "",
             strengths = map["strengths"] as? String ?: "",
             areasForImprovement = map["areasForImprovement"] as? String ?: ""
-        )
+        ).withCalculatedScores()
     }
 }
 
@@ -102,3 +140,4 @@ enum class ReviewStatus {
     SUBMITTED,    // Pending Approval
     APPROVED      // Finalized
 }
+        "qualityScore" to qualityScore,

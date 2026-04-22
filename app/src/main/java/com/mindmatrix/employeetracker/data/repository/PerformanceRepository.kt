@@ -1,42 +1,82 @@
 package com.mindmatrix.employeetracker.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
-import com.mindmatrix.employeetracker.data.local.dao.PerformanceDao
+import com.mindmatrix.employeetracker.data.model.AnalyticsSnapshot
 import com.mindmatrix.employeetracker.data.model.DepartmentAverage
+import com.mindmatrix.employeetracker.data.model.EmployeeRatingPoint
 import com.mindmatrix.employeetracker.data.model.LeaderboardEntry
+import com.mindmatrix.employeetracker.data.model.MonthlyTrendPoint
 import com.mindmatrix.employeetracker.data.model.PerformanceReview
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PerformanceRepository @Inject constructor(
-    private val firestore: FirebaseFirestore,
-    private val performanceDao: PerformanceDao
+    private val firestore: FirebaseFirestore
 ) : IPerformanceRepository {
-    private val collection = firestore.collection("performance_reviews")
+    private val collection = firestore.collection("performance")
+    private val legacyCollection = firestore.collection("performance_reviews")
 
-    override fun getReviewsForEmployee(employeeId: String): Flow<List<PerformanceReview>> = 
-        performanceDao.getReviewsByEmployee(employeeId)
+    override fun getReviewsForEmployee(employeeId: String): Flow<List<PerformanceReview>> = callbackFlow {
+        val listener = collection
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+            val reviews = snapshot?.documents?.map { doc ->
+                PerformanceReview.fromMap(doc.id, doc.data ?: emptyMap())
+            }?.filter { it.employeeId == employeeId } ?: emptyList()
+            trySend(reviews)
+        }
 
-    override fun getAllReviews(): Flow<List<PerformanceReview>> = 
-        performanceDao.getAllReviews()
+        awaitClose { listener.remove() }
+    }
+
+    override fun getAllReviews(): Flow<List<PerformanceReview>> = callbackFlow {
+        val listener = collection.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val reviews = snapshot?.documents?.map { doc ->
+                PerformanceReview.fromMap(doc.id, doc.data ?: emptyMap())
+            } ?: emptyList()
+            trySend(reviews)
+        }
+
+        awaitClose { listener.remove() }
+    }
 
     override suspend fun addReview(review: PerformanceReview): Result<String> = try {
-        val docRef = collection.add(review.toMap()).await()
-        val finalReview = review.copy(id = docRef.id)
-        performanceDao.insertReview(finalReview)
+        val normalized = review.withCalculatedScores()
+        val docRef = if (normalized.id.isNotBlank()) collection.document(normalized.id) else collection.document()
+        val finalReview = normalized.copy(id = docRef.id)
+        docRef.set(finalReview.toMap()).await()
         Result.success(docRef.id)
     } catch (e: Exception) {
         Result.failure(e)
     }
 
     override suspend fun updateReview(review: PerformanceReview): Result<Unit> = try {
-        collection.document(review.id).set(review.toMap()).await()
-        performanceDao.updateReview(review)
+        val normalized = review.withCalculatedScores()
+        collection.document(normalized.id).set(normalized.toMap()).await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun deleteReview(reviewId: String): Result<Unit> = try {
+        collection.document(reviewId).delete().await()
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
@@ -44,92 +84,144 @@ class PerformanceRepository @Inject constructor(
 
     override suspend fun getAverageScoreForEmployee(employeeId: String): Double = try {
         val snapshot = collection
+            .whereEqualTo("employee_id", employeeId)
+            .get()
+            .await()
+        val legacySnapshot = legacyCollection
             .whereEqualTo("employeeId", employeeId)
             .get()
             .await()
-        val reviews = snapshot.documents.mapNotNull { doc ->
-            (doc.data?.get("weightedScore") as? Number)?.toDouble()
-                ?: (doc.data?.get("overallScore") as? Number)?.toDouble() // Fallback
-        }
-        if (reviews.isNotEmpty()) reviews.average() else 0.0
-    } catch (e: Exception) {
+
+        val reviews = (snapshot.documents + legacySnapshot.documents).map { doc ->
+            PerformanceReview.fromMap(doc.id, doc.data ?: emptyMap())
+        }.distinctBy { it.id }
+        if (reviews.isNotEmpty()) reviews.map { it.overallRating }.average() else 0.0
+    } catch (_: Exception) {
         0.0
     }
 
-    override suspend fun getLeaderboard(): List<LeaderboardEntry> = try {
-        val reviewsSnapshot = collection.get().await()
+    override suspend fun getLeaderboard(): List<LeaderboardEntry> {
+        val analytics = getAnalyticsSnapshot()
+        return analytics.topPerformers + analytics.lowPerformers
+    }
+
+    override suspend fun getDepartmentAverages(): List<DepartmentAverage> {
+        return getAnalyticsSnapshot().departmentDistribution
+    }
+
+    override suspend fun getAnalyticsSnapshot(
+        department: String?,
+        startDate: String?,
+        endDate: String?
+    ): AnalyticsSnapshot = try {
+        val reviewsSnapshot = collection.get().await().documents + legacyCollection.get().await().documents
         val employeesSnapshot = firestore.collection("employees").get().await()
 
-        val employeeMap = employeesSnapshot.documents.associate { doc ->
-            doc.id to Pair(
-                doc.data?.get("name") as? String ?: "",
-                doc.data?.get("department") as? String ?: ""
-            )
+        val employees = employeesSnapshot.documents.associate { doc ->
+            val data = doc.data ?: emptyMap<String, Any?>()
+            val name = data["name"] as? String ?: "Unknown"
+            val dept = data["department"] as? String ?: "Unknown"
+            doc.id to (name to dept)
         }
 
-        val scoresByEmployee = reviewsSnapshot.documents
-            .groupBy { it.data?.get("employeeId") as? String ?: "" }
-            .mapValues { (_, docs) ->
-                docs.mapNotNull { 
-                    (it.data?.get("weightedScore") as? Number)?.toDouble()
-                        ?: (it.data?.get("overallScore") as? Number)?.toDouble()
-                }.average()
+        val start = parseIsoDate(startDate)
+        val end = parseIsoDate(endDate)
+
+        val filteredReviews = reviewsSnapshot
+            .map { PerformanceReview.fromMap(it.id, it.data ?: emptyMap()) }
+            .distinctBy { it.id }
+            .filter { review ->
+                val employeeDept = employees[review.employeeId]?.second
+                val deptMatch = department.isNullOrBlank() || employeeDept == department
+                val reviewDate = parseDate(review.date)
+                val startMatch = start == null || (reviewDate != null && !reviewDate.isBefore(start))
+                val endMatch = end == null || (reviewDate != null && !reviewDate.isAfter(end))
+                deptMatch && startMatch && endMatch
             }
 
-        scoresByEmployee.entries
-            .sortedByDescending { it.value }
-            .mapIndexed { index, entry ->
-                val (name, department) = employeeMap[entry.key] ?: Pair("Unknown", "Unknown")
-                LeaderboardEntry(
-                    employeeId = entry.key,
-                    employeeName = name,
-                    department = department,
-                    averageScore = entry.value,
-                    rank = index + 1
+        val byEmployee = filteredReviews.groupBy { it.employeeId }
+        val employeeAverages = byEmployee.map { (employeeId, employeeReviews) ->
+            val employeeMeta = employees[employeeId]
+            EmployeeRatingPoint(
+                employeeId = employeeId,
+                employeeName = employeeMeta?.first ?: "Unknown",
+                department = employeeMeta?.second ?: "Unknown",
+                averageRating = employeeReviews.map { it.overallRating }.average()
+            )
+        }.sortedByDescending { it.averageRating }
+
+        val deptDistribution = employeeAverages
+            .groupBy { it.department }
+            .map { (dept, entries) ->
+                DepartmentAverage(
+                    department = dept,
+                    averageScore = entries.map { it.averageRating }.average(),
+                    employeeCount = entries.size
                 )
             }
-    } catch (e: Exception) {
-        emptyList()
-    }
+            .sortedByDescending { it.averageScore }
 
-    override suspend fun getDepartmentAverages(): List<DepartmentAverage> = try {
-        val reviewsSnapshot = collection.get().await()
-        val employeesSnapshot = firestore.collection("employees").get().await()
-
-        val employeeDeptMap = employeesSnapshot.documents.associate { doc ->
-            doc.id to (doc.data?.get("department") as? String ?: "Unknown")
-        }
-
-        val reviewsByDept = reviewsSnapshot.documents
-            .groupBy { doc ->
-                val empId = doc.data?.get("employeeId") as? String ?: ""
-                employeeDeptMap[empId] ?: "Unknown"
+        val monthTrend = filteredReviews
+            .groupBy {
+                parseDate(it.date)?.let { date ->
+                    YearMonth.of(date.year, date.month)
+                }
+            }
+            .filterKeys { it != null }
+            .toSortedMap()
+            .map { (yearMonth, reviews) ->
+                MonthlyTrendPoint(
+                    month = yearMonth?.format(DateTimeFormatter.ofPattern("MMM yyyy", Locale.getDefault())) ?: "",
+                    averageRating = reviews.map { it.overallRating }.average()
+                )
             }
 
-        reviewsByDept.map { (dept, docs) ->
-            val scores = docs.mapNotNull { 
-                (it.data?.get("weightedScore") as? Number)?.toDouble()
-                    ?: (it.data?.get("overallScore") as? Number)?.toDouble()
-            }
-            DepartmentAverage(
-                department = dept,
-                averageScore = if (scores.isNotEmpty()) scores.average() else 0.0,
-                employeeCount = docs.map { it.data?.get("employeeId") }.distinct().size
+        val leaderboard = employeeAverages.mapIndexed { index, point ->
+            LeaderboardEntry(
+                employeeId = point.employeeId,
+                employeeName = point.employeeName,
+                department = point.department,
+                averageScore = point.averageRating,
+                rank = index + 1
             )
         }
-    } catch (e: Exception) {
-        emptyList()
+
+        AnalyticsSnapshot(
+            employeeAverages = employeeAverages,
+            departmentDistribution = deptDistribution,
+            monthlyTrend = monthTrend,
+            topPerformers = leaderboard.take(3),
+            lowPerformers = leaderboard.takeLast(3).reversed()
+        )
+    } catch (_: Exception) {
+        AnalyticsSnapshot()
     }
 
-    override suspend fun syncPerformanceData(): Result<Unit> = try {
-        val snapshot = collection.get().await()
-        val reviews = snapshot.documents.map { doc ->
-            PerformanceReview.fromMap(doc.id, doc.data ?: emptyMap())
+    override suspend fun syncPerformanceData(): Result<Unit> = Result.success(Unit)
+
+    private fun parseIsoDate(value: String?): LocalDate? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            LocalDate.parse(value)
+        } catch (_: Exception) {
+            null
         }
-        performanceDao.deleteAllReviews()
-        performanceDao.insertReviews(reviews)
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
+    }
+
+    private fun parseDate(raw: String?): LocalDate? {
+        if (raw.isNullOrBlank()) return null
+
+        val iso = try {
+            LocalDate.parse(raw)
+        } catch (_: DateTimeParseException) {
+            null
+        }
+        if (iso != null) return iso
+
+        return try {
+            LocalDate.parse(raw, DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault()))
+        } catch (_: DateTimeParseException) {
+            null
+        }
     }
 }
