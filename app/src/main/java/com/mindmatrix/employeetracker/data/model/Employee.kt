@@ -2,6 +2,7 @@ package com.mindmatrix.employeetracker.data.model
 
 import androidx.room.Entity
 import androidx.room.Index
+import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 
 /**
@@ -24,12 +25,18 @@ enum class UserRole {
 data class Employee(
     @PrimaryKey
     val id: String = "",
+    @ColumnInfo(name = "email")
     val email: String = "",
+    @ColumnInfo(name = "name")
     val name: String = "",
+    @ColumnInfo(name = "role")
     val role: UserRole = UserRole.EMPLOYEE,
+    @ColumnInfo(name = "department")
     val department: String = "",
     val designation: String = "",
+    @ColumnInfo(name = "contact")
     val phone: String = "",
+    @ColumnInfo(name = "joining_date")
     val joinDate: String = "",
     val profileImageUrl: String = "",
     val isActive: Boolean = true,
@@ -47,7 +54,9 @@ data class Employee(
         "department" to department,
         "designation" to designation,
         "phone" to phone,
+        "contact" to phone,
         "joinDate" to joinDate,
+        "joining_date" to joinDate,
         "profileImageUrl" to profileImageUrl,
         "isActive" to isActive,
         "managerId" to managerId,
@@ -70,8 +79,8 @@ data class Employee(
             },
             department = map["department"] as? String ?: "",
             designation = map["designation"] as? String ?: "",
-            phone = map["phone"] as? String ?: "",
-            joinDate = map["joinDate"] as? String ?: "",
+            phone = (map["phone"] ?: map["contact"]) as? String ?: "",
+            joinDate = (map["joinDate"] ?: map["joining_date"]) as? String ?: "",
             profileImageUrl = map["profileImageUrl"] as? String ?: "",
             isActive = map["isActive"] as? Boolean ?: true,
             managerId = map["managerId"] as? String ?: "",

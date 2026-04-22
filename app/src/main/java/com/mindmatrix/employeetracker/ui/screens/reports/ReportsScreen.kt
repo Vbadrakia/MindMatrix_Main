@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindmatrix.employeetracker.data.model.TaskStatus
 import com.mindmatrix.employeetracker.data.model.UserRole
@@ -27,12 +28,12 @@ import com.mindmatrix.employeetracker.ui.theme.*
 import com.mindmatrix.employeetracker.viewmodel.AuthViewModel
 import com.mindmatrix.employeetracker.viewmodel.EmployeeViewModel
 import com.mindmatrix.employeetracker.viewmodel.PerformanceViewModel
+import com.mindmatrix.employeetracker.viewmodel.ReportsViewModel
 import com.mindmatrix.employeetracker.viewmodel.TaskViewModel
+import com.mindmatrix.employeetracker.utils.CsvReportBuilder
 import android.content.Intent
-import android.net.Uri
 import androidx.core.content.FileProvider
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,20 +44,22 @@ fun ReportsScreen(
     authViewModel: AuthViewModel = hiltViewModel(),
     employeeViewModel: EmployeeViewModel = hiltViewModel(),
     taskViewModel: TaskViewModel = hiltViewModel(),
-    performanceViewModel: PerformanceViewModel = hiltViewModel()
+    performanceViewModel: PerformanceViewModel = hiltViewModel(),
+    reportsViewModel: ReportsViewModel = hiltViewModel()
 ) {
-    val authState by authViewModel.authState.collectAsState()
-    val employeeState by employeeViewModel.state.collectAsState()
-    val taskState by taskViewModel.state.collectAsState()
-    val performanceState by performanceViewModel.state.collectAsState()
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
+    val employeeState by employeeViewModel.state.collectAsStateWithLifecycle()
+    val taskState by taskViewModel.state.collectAsStateWithLifecycle()
+    val performanceState by performanceViewModel.state.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val currentEmployee = authState.currentEmployee
     val isAdmin = currentEmployee?.role == UserRole.ADMIN
+    val isLead = currentEmployee?.role == UserRole.LEAD
 
-    var selectedDeptFilter by remember { mutableStateOf<String?>(null) }
-    var selectedCategoryFilter by remember { mutableStateOf<String?>("Overall") }
-    var selectedTimeRange by remember { mutableStateOf("Monthly") }
+    val selectedDeptFilter by reportsViewModel.selectedDeptFilter.collectAsStateWithLifecycle()
+    val selectedCategoryFilter by reportsViewModel.selectedCategoryFilter.collectAsStateWithLifecycle()
+    val selectedTimeRange by reportsViewModel.selectedTimeRange.collectAsStateWithLifecycle()
 
     LaunchedEffect(currentEmployee) {
         if (isAdmin || currentEmployee?.role == UserRole.LEAD) {
@@ -69,7 +72,7 @@ fun ReportsScreen(
     // Set default department for Lead
     LaunchedEffect(currentEmployee) {
         if (currentEmployee?.role == UserRole.LEAD && selectedDeptFilter == null) {
-            selectedDeptFilter = currentEmployee.department
+            reportsViewModel.setSelectedDeptFilter(currentEmployee.department)
         }
     }
 
@@ -85,26 +88,16 @@ fun ReportsScreen(
             if (isAdmin || isLead) {
                 FloatingActionButton(
                     onClick = {
-                        val csvData = StringBuilder()
-                        // Header
-                        csvData.append("Employee ID,Employee Name,Department,Average Score,Rank,Category,Date\n")
-                        
-                        val leaderboardToExport = if (isAdmin) {
-                            performanceState.leaderboard
-                        } else {
-                            performanceState.leaderboard.filter { it.department == currentEmployee?.department }
-                        }
-
-                        leaderboardToExport.forEach { entry ->
-                            val employee = employeeState.employees.find { it.name == entry.employeeName }
-                            csvData.append("${employee?.id ?: "N/A"},")
-                            csvData.append("${entry.employeeName},")
-                            csvData.append("${entry.department},")
-                            csvData.append("${String.format(Locale.getDefault(), "%.2f", entry.averageScore)},")
-                            csvData.append("${entry.rank},")
-                            csvData.append("${selectedCategoryFilter ?: stringResource(R.string.filter_overall)},")
-                            csvData.append("${java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())}\n")
-                        }
+                        val leaderboardToExport = reportsViewModel.filterLeaderboard(
+                            leaderboard = performanceState.leaderboard,
+                            isAdmin = isAdmin,
+                            currentDepartment = currentEmployee?.department
+                        )
+                        val csvData = CsvReportBuilder.buildLeaderboardCsv(
+                            entries = leaderboardToExport,
+                            employees = employeeState.employees,
+                            selectedCategory = selectedCategoryFilter
+                        )
                         
                         try {
                             val file = File(context.cacheDir, "performance_report_${System.currentTimeMillis()}.csv")
@@ -146,7 +139,7 @@ fun ReportsScreen(
                             item {
                                 FilterChip(
                                     selected = selectedDeptFilter == null,
-                                    onClick = { selectedDeptFilter = null },
+                                    onClick = { reportsViewModel.setSelectedDeptFilter(null) },
                                     label = { Text(stringResource(R.string.all_depts)) }
                                 )
                             }
@@ -154,7 +147,7 @@ fun ReportsScreen(
                             items(depts) { dept ->
                                 FilterChip(
                                     selected = selectedDeptFilter == dept,
-                                    onClick = { selectedDeptFilter = dept },
+                                    onClick = { reportsViewModel.setSelectedDeptFilter(dept) },
                                     label = { Text(dept) }
                                 )
                             }
@@ -167,7 +160,7 @@ fun ReportsScreen(
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.department_label, currentEmployee?.department ?: ""),
+                                text = stringResource(R.string.department_label_format, currentEmployee?.department ?: ""),
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
@@ -192,7 +185,7 @@ fun ReportsScreen(
                         items(categories) { category ->
                             FilterChip(
                                 selected = selectedCategoryFilter == category,
-                                onClick = { selectedCategoryFilter = category },
+                                onClick = { reportsViewModel.setSelectedCategoryFilter(category) },
                                 label = { Text(category) },
                                 leadingIcon = if (selectedCategoryFilter == category) {
                                     { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
@@ -215,7 +208,7 @@ fun ReportsScreen(
                         items(timeRanges) { range ->
                             FilterChip(
                                 selected = selectedTimeRange == range,
-                                onClick = { selectedTimeRange = range },
+                                onClick = { reportsViewModel.setSelectedTimeRange(range) },
                                 label = { Text(range) }
                             )
                         }

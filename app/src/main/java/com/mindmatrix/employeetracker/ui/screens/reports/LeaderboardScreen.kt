@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindmatrix.employeetracker.ui.components.*
 import com.mindmatrix.employeetracker.ui.theme.*
@@ -31,7 +32,7 @@ fun LeaderboardScreen(
     onNavigateBack: () -> Unit = {},
     performanceViewModel: PerformanceViewModel = hiltViewModel()
 ) {
-    val state by performanceViewModel.state.collectAsState()
+    val state by performanceViewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         performanceViewModel.loadLeaderboard()

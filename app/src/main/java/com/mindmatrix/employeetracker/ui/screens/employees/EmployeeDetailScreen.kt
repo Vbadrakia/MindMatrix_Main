@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindmatrix.employeetracker.ui.components.*
 import com.mindmatrix.employeetracker.ui.theme.*
@@ -50,12 +51,12 @@ fun EmployeeDetailScreen(
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var feedbackText by remember { mutableStateOf("") }
     
-    val selectedEmployee by employeeViewModel.selectedEmployee.collectAsState()
-    val departmentState by departmentViewModel.state.collectAsState()
-    val taskState by taskViewModel.state.collectAsState()
-    val performanceState by performanceViewModel.state.collectAsState()
-    val authState by authViewModel.authState.collectAsState()
-    val documentState by documentViewModel.state.collectAsState()
+    val selectedEmployee by employeeViewModel.selectedEmployee.collectAsStateWithLifecycle()
+    val departmentState by departmentViewModel.state.collectAsStateWithLifecycle()
+    val taskState by taskViewModel.state.collectAsStateWithLifecycle()
+    val performanceState by performanceViewModel.state.collectAsStateWithLifecycle()
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
+    val documentState by documentViewModel.state.collectAsStateWithLifecycle()
 
     val currentUser = authState.currentEmployee
     val isAdmin = currentUser?.role == com.mindmatrix.employeetracker.data.model.UserRole.ADMIN
@@ -117,7 +118,7 @@ fun EmployeeDetailScreen(
         )
     }
 
-    val employeeState by employeeViewModel.state.collectAsState()
+    val employeeState by employeeViewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(employeeState.error) {

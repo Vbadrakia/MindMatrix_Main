@@ -14,9 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindmatrix.employeetracker.data.model.Department
 import com.mindmatrix.employeetracker.ui.components.*
@@ -30,8 +32,8 @@ fun DepartmentScreen(
     viewModel: DepartmentViewModel = hiltViewModel(),
     employeeViewModel: com.mindmatrix.employeetracker.viewmodel.EmployeeViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
-    val employeeState by employeeViewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val employeeState by employeeViewModel.state.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var departmentToEdit by remember { mutableStateOf<Department?>(null) }
     var departmentToDelete by remember { mutableStateOf<Department?>(null) }
@@ -49,8 +51,8 @@ fun DepartmentScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             DashboardTopBar(
-                title = "Departments",
-                subtitle = "Manage Organization Structure",
+                title = stringResource(R.string.departments_title),
+                subtitle = stringResource(R.string.departments_subtitle),
                 onBackClick = onNavigateBack
             )
         },
@@ -61,7 +63,7 @@ fun DepartmentScreen(
                 contentColor = Color.White,
                 shape = CircleShape
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Department")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_department_desc))
             }
         },
         containerColor = Background
@@ -80,8 +82,8 @@ fun DepartmentScreen(
                 ) {
                     EmptyState(
                         icon = Icons.Default.Business,
-                        title = "No departments found",
-                        subtitle = "Add departments to organize your team."
+                        title = stringResource(R.string.no_departments_found),
+                        subtitle = stringResource(R.string.no_departments_subtitle)
                     )
                 }
             } else {
@@ -125,8 +127,11 @@ fun DepartmentScreen(
 
     if (departmentToDelete != null) {
         ConfirmationDialog(
-            title = "Delete Department",
-            message = "Are you sure you want to delete '${departmentToDelete?.name}'? Employees assigned to this department will need to be reassigned.",
+            title = stringResource(R.string.delete_department_title),
+            message = stringResource(
+                R.string.delete_department_message,
+                departmentToDelete?.name ?: ""
+            ),
             onConfirm = {
                 viewModel.deleteDepartment(departmentToDelete!!.id)
                 departmentToDelete = null
@@ -171,7 +176,7 @@ fun DepartmentCard(
                     }
                     if (department.headId.isNotBlank()) {
                         Text(
-                            text = "Head: ${department.headId}",
+                            text = stringResource(R.string.department_head_format, department.headId),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = Primary,
@@ -182,10 +187,10 @@ fun DepartmentCard(
                 
                 Row {
                     IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Primary)
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), tint = Primary)
                     }
                     IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Error)
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = Error)
                     }
                 }
             }
@@ -210,7 +215,11 @@ fun AddEditDepartmentDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = if (department != null) "Edit Department" else "Add Department",
+                text = if (department != null) {
+                    stringResource(R.string.edit_department_title)
+                } else {
+                    stringResource(R.string.add_department_title)
+                },
                 fontWeight = FontWeight.Bold
             )
         },
@@ -219,14 +228,14 @@ fun AddEditDepartmentDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Department Name") },
+                    label = { Text(stringResource(R.string.department_name_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description") },
+                    label = { Text(stringResource(R.string.description)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     minLines = 3
@@ -239,7 +248,7 @@ fun AddEditDepartmentDialog(
                     OutlinedTextField(
                         value = headId,
                         onValueChange = { headId = it },
-                        label = { Text("Head of Department (Lead/Admin)") },
+                        label = { Text(stringResource(R.string.hod_label)) },
                         modifier = Modifier.fillMaxWidth().menuAnchor(),
                         shape = RoundedCornerShape(12.dp),
                         readOnly = true,
@@ -250,7 +259,7 @@ fun AddEditDepartmentDialog(
                         onDismissRequest = { expanded = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("None") },
+                            text = { Text(stringResource(R.string.none)) },
                             onClick = {
                                 headId = ""
                                 expanded = false
@@ -275,12 +284,12 @@ fun AddEditDepartmentDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(if (department != null) "Save" else "Add")
+                Text(if (department != null) stringResource(R.string.save) else stringResource(R.string.add))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
         shape = RoundedCornerShape(24.dp)

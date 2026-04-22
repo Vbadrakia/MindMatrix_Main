@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindmatrix.employeetracker.ui.components.*
 import com.mindmatrix.employeetracker.ui.theme.*
@@ -29,8 +30,8 @@ fun PerformanceHistoryScreen(
     authViewModel: AuthViewModel = hiltViewModel(),
     performanceViewModel: PerformanceViewModel = hiltViewModel()
 ) {
-    val authState by authViewModel.authState.collectAsState()
-    val performanceState by performanceViewModel.state.collectAsState()
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
+    val performanceState by performanceViewModel.state.collectAsStateWithLifecycle()
     val currentEmployee = authState.currentEmployee
 
     LaunchedEffect(currentEmployee) {
