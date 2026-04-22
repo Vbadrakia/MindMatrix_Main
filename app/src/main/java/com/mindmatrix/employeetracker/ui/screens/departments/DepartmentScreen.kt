@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindmatrix.employeetracker.data.model.Department
 import com.mindmatrix.employeetracker.ui.components.*
@@ -30,8 +31,8 @@ fun DepartmentScreen(
     viewModel: DepartmentViewModel = hiltViewModel(),
     employeeViewModel: com.mindmatrix.employeetracker.viewmodel.EmployeeViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
-    val employeeState by employeeViewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val employeeState by employeeViewModel.state.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var departmentToEdit by remember { mutableStateOf<Department?>(null) }
     var departmentToDelete by remember { mutableStateOf<Department?>(null) }

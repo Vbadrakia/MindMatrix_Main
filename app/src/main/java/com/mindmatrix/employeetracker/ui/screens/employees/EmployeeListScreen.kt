@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindmatrix.employeetracker.ui.components.*
 import com.mindmatrix.employeetracker.ui.theme.*
@@ -35,9 +36,9 @@ fun EmployeeListScreen(
     departmentViewModel: com.mindmatrix.employeetracker.viewmodel.DepartmentViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
-    val state by employeeViewModel.state.collectAsState()
-    val departmentState by departmentViewModel.state.collectAsState()
-    val authState by authViewModel.authState.collectAsState()
+    val state by employeeViewModel.state.collectAsStateWithLifecycle()
+    val departmentState by departmentViewModel.state.collectAsStateWithLifecycle()
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val isAdmin = authState.currentEmployee?.role == UserRole.ADMIN
 
     var showAddDialog by remember { mutableStateOf(false) }

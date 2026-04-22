@@ -21,7 +21,7 @@ import com.mindmatrix.employeetracker.data.model.Task
         com.mindmatrix.employeetracker.data.model.Department::class,
         com.mindmatrix.employeetracker.data.model.Document::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

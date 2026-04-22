@@ -9,7 +9,7 @@ interface PerformanceDao {
     @Query("SELECT * FROM performance_reviews")
     fun getAllReviews(): Flow<List<PerformanceReview>>
 
-    @Query("SELECT * FROM performance_reviews WHERE employeeId = :employeeId")
+    @Query("SELECT * FROM performance_reviews WHERE employee_id = :employeeId")
     fun getReviewsByEmployee(employeeId: String): Flow<List<PerformanceReview>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
