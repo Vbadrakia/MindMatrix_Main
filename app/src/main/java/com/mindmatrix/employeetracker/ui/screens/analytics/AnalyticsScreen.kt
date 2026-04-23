@@ -1,5 +1,8 @@
 package com.mindmatrix.employeetracker.ui.screens.analytics
 
+import androidx.compose.ui.res.stringResource
+import com.mindmatrix.employeetracker.R
+import com.mindmatrix.employeetracker.data.model.DepartmentAverage
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape

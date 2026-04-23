@@ -61,10 +61,10 @@ fun LeadDashboardScreen(
     
     val currentEmployee = authState.currentEmployee
     val teamMembers = employeeState.employees.filter { it.managerId == currentEmployee?.id }
-    val teamTasks = taskState.tasks.filter { task -> teamMembers.any { it.id == task.employeeId } }
+    val teamTasks = taskState.tasks.filter { task -> teamMembers.any { it.id == task.assignedTo } }
     val teamReviews = performanceState.reviews.filter { review -> teamMembers.any { it.id == review.employeeId } }
-    val pendingReviews = teamReviews.filter { !it.isApproved }
-    val teamLeaderboard = performanceState.leaderboard.filter { entry -> teamMembers.any { it.id == entry.employeeId } }
+    val pendingReviews = teamReviews.filter { it.status != com.mindmatrix.employeetracker.data.model.ReviewStatus.APPROVED }
+    val teamLeaderboard = performanceState.leaderboard.filter { entry -> teamMembers.any { it.id == entry.employeeName } }
     
     var isRefreshing by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullRefreshState(
@@ -72,9 +72,9 @@ fun LeadDashboardScreen(
         onRefresh = {
             isRefreshing = true
             currentEmployee?.let {
-                employeeViewModel.loadEmployees()
+                employeeViewModel.searchEmployees("")
                 taskViewModel.loadTasks()
-                performanceViewModel.loadReviews()
+                performanceViewModel.loadAllReviews()
                 performanceViewModel.loadLeaderboard()
                 performanceViewModel.loadAverageScore(it.id)
                 insightsViewModel.generateInsights(com.mindmatrix.employeetracker.data.model.UserRole.LEAD, it.id)
@@ -88,9 +88,9 @@ fun LeadDashboardScreen(
 
     LaunchedEffect(currentEmployee?.id) {
         currentEmployee?.let {
-            employeeViewModel.loadEmployees()
+            employeeViewModel.searchEmployees("")
             taskViewModel.loadTasks()
-            performanceViewModel.loadReviews()
+            performanceViewModel.loadAllReviews()
             performanceViewModel.loadLeaderboard()
             performanceViewModel.loadAverageScore(it.id)
             insightsViewModel.generateInsights(com.mindmatrix.employeetracker.data.model.UserRole.LEAD, it.id)
@@ -240,7 +240,7 @@ fun LeadDashboardScreen(
                         if (teamLeaderboard.isNotEmpty()) {
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(end = 24.dp)) {
                                 items(teamLeaderboard.take(5)) { entry ->
-                                    TopPerformerCard(name = entry.employeeName, designation = entry.designation, score = entry.averageScore)
+                                    TopPerformerCard(name = entry.employeeName, designation = entry.department, score = entry.averageScore)
                                 }
                             }
                         }
@@ -312,7 +312,7 @@ fun LeadTaskCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = task.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    TaskBadge(value = getLocalizedTaskPriority(task.priority), color = getTaskPriorityColor(task.priority))
+                    TaskBadge(priority = task.priority)
                 }
                 Box {
                     StatusChip(

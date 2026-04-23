@@ -1,5 +1,7 @@
 package com.mindmatrix.employeetracker.ui.screens.tasks
 
+import androidx.compose.ui.res.stringResource
+import com.mindmatrix.employeetracker.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -42,10 +44,34 @@ fun TaskDetailScreen(
     val task = state.tasks.find { it.id == taskId }
     val currentUser = authState.currentEmployee
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
     var comments by remember(task) { mutableStateOf(task?.comments ?: "") }
     var isEditingComments by remember { mutableStateOf(false) }
 
+    // Load data if not already present
+    LaunchedEffect(authState.currentEmployee) {
+        authState.currentEmployee?.let { employee ->
+            if (state.tasks.isEmpty()) {
+                if (employee.role == UserRole.EMPLOYEE) {
+                    taskViewModel.loadTasksForEmployee(employee.id)
+                } else {
+                    taskViewModel.loadTasks()
+                }
+            }
+        }
+    }
+
+    // Handle Errors
+    LaunchedEffect(state.error) {
+        state.error?.let {
+            snackbarHostState.showSnackbar(it)
+            taskViewModel.clearError()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.task_details), fontWeight = FontWeight.Bold) },

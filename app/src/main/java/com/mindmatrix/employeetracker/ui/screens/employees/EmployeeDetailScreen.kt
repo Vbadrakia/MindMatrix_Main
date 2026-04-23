@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
+import com.mindmatrix.employeetracker.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindmatrix.employeetracker.ui.components.*
 import com.mindmatrix.employeetracker.ui.theme.*
@@ -56,6 +58,7 @@ fun EmployeeDetailScreen(
     val performanceState by performanceViewModel.state.collectAsState()
     val authState by authViewModel.authState.collectAsState()
     val documentState by documentViewModel.state.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val currentUser = authState.currentEmployee
     val isAdmin = currentUser?.role == com.mindmatrix.employeetracker.data.model.UserRole.ADMIN
@@ -147,54 +150,54 @@ fun EmployeeDetailScreen(
         },
         containerColor = Background
     ) { padding ->
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: android.net.Uri? ->
-        uri?.let {
-            employeeViewModel.uploadProfileImage(employeeId, it)
-        }
-    }
-
-    if (employee == null) {
-        LoadingOverlay(isLoading = true, modifier = Modifier.padding(padding))
-    } else {
-        // Check access: Leads can only view employees in their own department
-        val hasAccess = isAdmin || (isLead && employee.department == currentUser?.department) || isOwnProfile
-        
-        if (!hasAccess) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.no_permission_profile))
+        val imagePickerLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent()
+        ) { uri: android.net.Uri? ->
+            uri?.let {
+                employeeViewModel.uploadProfileImage(employeeId, it)
             }
+        }
+
+        if (employee == null) {
+            LoadingOverlay(isLoading = true, modifier = Modifier.padding(padding))
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(24.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                // Profile header Card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = Surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+            // Check access: Leads can only view employees in their own department
+            val hasAccess = isAdmin || (isLead && employee.department == currentUser?.department) || isOwnProfile
+            
+            if (!hasAccess) {
+                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.no_permission_profile))
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentPadding = PaddingValues(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // Profile header Card
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = Surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
-                            EmployeeAvatar(
-                                name = employee.name,
-                                photoUrl = employee.profileImageUrl,
-                                size = 80,
-                                onClick = if (isOwnProfile || isAdmin) {
-                                    { imagePickerLauncher.launch("image/*") }
-                                } else null
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                EmployeeAvatar(
+                                    name = employee.name,
+                                    photoUrl = employee.profileImageUrl,
+                                    size = 80,
+                                    onClick = if (isOwnProfile || isAdmin) {
+                                        { imagePickerLauncher.launch("image/*") }
+                                    } else null
+                                )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
                                     text = employee.name,
@@ -279,189 +282,33 @@ fun EmployeeDetailScreen(
                         }
                     }
 
-                // Stats Row
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        StatCard(
-                            title = stringResource(R.string.assigned_tasks_header),
-                            value = "${taskState.tasks.size}",
-                            icon = Icons.AutoMirrored.Filled.Assignment,
-                            gradientColors = listOf(Primary, PrimaryLight),
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatCard(
-                            title = stringResource(R.string.performance),
-                            value = String.format(Locale.getDefault(), "%.1f / 100", performanceState.averageScore),
-                            icon = Icons.Default.Assessment,
-                            gradientColors = listOf(SecondaryDark, Secondary),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                // Information Section Header
-                item {
-                    Text(
-                        text = stringResource(R.string.contact_information),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryDark,
-                        modifier = Modifier.padding(start = 4.dp, top = 8.dp)
-                    )
-                }
-
-                // Contact info Card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = Surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            InfoRow(
-                                icon = Icons.Default.Email,
-                                label = stringResource(R.string.email_address),
-                                value = employee.email
-                            )
-                            if (employee.phone.isNotBlank()) {
-                                InfoRow(
-                                    icon = Icons.Default.Phone,
-                                    label = stringResource(R.string.phone_number),
-                                    value = employee.phone
-                                )
-                            }
-                            if (employee.joinDate.isNotBlank()) {
-                                InfoRow(
-                                    icon = Icons.Default.CalendarToday,
-                                    label = stringResource(R.string.joining_date),
-                                    value = employee.joinDate
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Documents Section
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 4.dp, top = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.documents_attachments),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryDark
-                        )
-                        if (isOwnProfile || isAdmin) {
-                            TextButton(onClick = { documentPickerLauncher.launch("*/*") }) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.upload))
-                            }
-                        }
-                    }
-                }
-
-                if (documentState.documents.isEmpty()) {
+                    // Stats Row
                     item {
-                        Card(
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = Surface.copy(alpha = 0.5f))
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Box(
-                                modifier = Modifier.padding(32.dp).fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Default.UploadFile, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(48.dp))
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(stringResource(R.string.no_documents), style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
-                                }
-                            }
+                            StatCard(
+                                title = stringResource(R.string.assigned_tasks_header),
+                                value = "${taskState.tasks.size}",
+                                icon = Icons.AutoMirrored.Filled.Assignment,
+                                gradientColors = listOf(Primary, PrimaryLight),
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatCard(
+                                title = stringResource(R.string.performance),
+                                value = String.format(Locale.getDefault(), "%.1f / 100", performanceState.averageScore),
+                                icon = Icons.Default.Assessment,
+                                gradientColors = listOf(SecondaryDark, Secondary),
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
-                } else {
-                    items(documentState.documents) { doc ->
-                        DocumentItem(
-                            document = doc,
-                            onDelete = if (isOwnProfile || isAdmin) { { documentViewModel.deleteDocument(doc) } } else null
-                        )
-                    }
-                }
 
-                // Tasks Section Header
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 4.dp, top = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.assigned_tasks_header),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryDark
-                        )
-                        if (taskState.tasks.size > 5) {
-                            TextButton(onClick = { /* Navigate to all tasks */ }) {
-                                Text(stringResource(R.string.view_all), color = Primary)
-                            }
-                        }
-                    }
-                }
-
-                // Recent tasks list
-                if (taskState.tasks.isEmpty()) {
-                    item {
-                        EmptyStateCard(
-                            message = stringResource(R.string.no_tasks_assigned),
-                            icon = Icons.AutoMirrored.Filled.Assignment
-                        )
-                    }
-                } else {
-                    items(taskState.tasks.take(5)) { task ->
-                        TaskSmallCard(task = task)
-                    }
-                }
-
-                // Performance Section Header
-                item {
-                    Text(
-                        text = stringResource(R.string.performance_overview),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryDark,
-                        modifier = Modifier.padding(start = 4.dp, top = 8.dp)
-                    )
-                }
-
-                // Performance Chart
-                item {
-                    PerformanceTrendCard(
-                        reviews = performanceState.reviews,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                // Recent Reviews
-                if (performanceState.reviews.isNotEmpty()) {
+                    // Information Section Header
                     item {
                         Text(
-                            text = stringResource(R.string.recent_reviews),
+                            text = stringResource(R.string.contact_information),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = PrimaryDark,
@@ -469,75 +316,233 @@ fun EmployeeDetailScreen(
                         )
                     }
 
-                    items(performanceState.reviews.take(3)) { review ->
-                        val canApprove = (isAdmin || (isLead && currentUser?.department == selectedEmployee?.department)) && !isOwnProfile
-                        PerformanceReviewCard(
-                            review = review,
-                            showApproveButton = canApprove,
-                            onApprove = { performanceViewModel.approveReview(review.id) }
+                    // Contact info Card
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = Surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                InfoRow(
+                                    icon = Icons.Default.Email,
+                                    label = stringResource(R.string.email_address),
+                                    value = employee.email
+                                )
+                                if (employee.phone.isNotBlank()) {
+                                    InfoRow(
+                                        icon = Icons.Default.Phone,
+                                        label = stringResource(R.string.phone_number),
+                                        value = employee.phone
+                                    )
+                                }
+                                if (employee.joinDate.isNotBlank()) {
+                                    InfoRow(
+                                        icon = Icons.Default.CalendarToday,
+                                        label = stringResource(R.string.joining_date),
+                                        value = employee.joinDate
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Documents Section
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 4.dp, top = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.documents_attachments),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryDark
+                            )
+                            if (isOwnProfile || isAdmin) {
+                                TextButton(onClick = { documentPickerLauncher.launch("*/*") }) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(stringResource(R.string.upload))
+                                }
+                            }
+                        }
+                    }
+
+                    if (documentState.documents.isEmpty()) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(containerColor = Surface.copy(alpha = 0.5f))
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(32.dp).fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.UploadFile, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(48.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(stringResource(R.string.no_documents), style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        items(documentState.documents) { doc ->
+                            DocumentItem(
+                                document = doc,
+                                onDelete = if (isOwnProfile || isAdmin) { { documentViewModel.deleteDocument(doc) } } else null
+                            )
+                        }
+                    }
+
+                    // Tasks Section Header
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 4.dp, top = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.assigned_tasks_header),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryDark
+                            )
+                            if (taskState.tasks.size > 5) {
+                                TextButton(onClick = { /* Navigate to all tasks */ }) {
+                                    Text(stringResource(R.string.view_all), color = Primary)
+                                }
+                            }
+                        }
+                    }
+
+                    // Recent tasks list
+                    if (taskState.tasks.isEmpty()) {
+                        item {
+                            EmptyStateCard(
+                                message = stringResource(R.string.no_tasks_assigned),
+                                icon = Icons.AutoMirrored.Filled.Assignment
+                            )
+                        }
+                    } else {
+                        items(taskState.tasks.take(5)) { task ->
+                            TaskSmallCard(task = task)
+                        }
+                    }
+
+                    // Performance Section Header
+                    item {
+                        Text(
+                            text = stringResource(R.string.performance_overview),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryDark,
+                            modifier = Modifier.padding(start = 4.dp, top = 8.dp)
                         )
                     }
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Performance Chart
+                    item {
+                        PerformanceTrendCard(
+                            reviews = performanceState.reviews,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // Recent Reviews
+                    if (performanceState.reviews.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.recent_reviews),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryDark,
+                                modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                            )
+                        }
+
+                        items(performanceState.reviews.take(3)) { review ->
+                            val canApprove = (isAdmin || (isLead && currentUser?.department == selectedEmployee?.department)) && !isOwnProfile
+                            PerformanceReviewCard(
+                                review = review,
+                                showApproveButton = canApprove,
+                                onApprove = { performanceViewModel.approveReview(review.id) }
+                            )
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
                 }
             }
         }
-    }
 
-    if (showFeedbackDialog) {
-        AlertDialog(
-            onDismissRequest = { 
-                showFeedbackDialog = false 
-                feedbackText = ""
-            },
-            title = { Text(stringResource(R.string.send_feedback)) },
-            text = {
-                OutlinedTextField(
-                    value = feedbackText,
-                    onValueChange = { feedbackText = it },
-                    label = { Text(stringResource(R.string.message)) },
-                    modifier = Modifier.fillMaxWidth().height(150.dp),
-                    shape = RoundedCornerShape(12.dp)
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        selectedEmployee?.let { emp ->
-                            notificationViewModel.sendNotification(
-                                com.mindmatrix.employeetracker.data.model.Notification(
-                                    recipientId = emp.id,
-                                    senderId = currentUser?.id ?: "",
-                                    senderName = currentUser?.name ?: "",
-                                    title = String.format(Locale.getDefault(), stringResource(R.string.feedback_from), currentUser?.name ?: ""),
-                                    message = feedbackText,
-                                    type = com.mindmatrix.employeetracker.data.model.NotificationType.GENERAL,
-                                    timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm"))
+        if (showFeedbackDialog) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showFeedbackDialog = false 
+                    feedbackText = ""
+                },
+                title = { Text(stringResource(R.string.send_feedback)) },
+                text = {
+                    OutlinedTextField(
+                        value = feedbackText,
+                        onValueChange = { feedbackText = it },
+                        label = { Text(stringResource(R.string.message)) },
+                        modifier = Modifier.fillMaxWidth().height(150.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            selectedEmployee?.let { emp ->
+                                notificationViewModel.sendNotification(
+                                    com.mindmatrix.employeetracker.data.model.Notification(
+                                        recipientId = emp.id,
+                                        senderId = currentUser?.id ?: "",
+                                        senderName = currentUser?.name ?: "",
+                                        title = context.getString(R.string.feedback_from, currentUser?.name ?: ""),
+                                        message = feedbackText,
+                                        type = com.mindmatrix.employeetracker.data.model.NotificationType.GENERAL,
+                                        timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm"))
+                                    )
                                 )
-                            )
-                        }
+                            }
+                            showFeedbackDialog = false
+                            feedbackText = ""
+                        },
+                        enabled = feedbackText.isNotBlank()
+                    ) {
+                        Text(stringResource(R.string.send))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { 
                         showFeedbackDialog = false
                         feedbackText = ""
-                    },
-                    enabled = feedbackText.isNotBlank()
-                ) {
-                    Text(stringResource(R.string.send))
+                    }) {
+                        Text(stringResource(R.string.cancel))
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { 
-                    showFeedbackDialog = false
-                    feedbackText = ""
-                }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
+            )
+        }
     }
 }
 
 @Composable
-private fun InfoRow(
+fun InfoRow(
     icon: ImageVector,
     label: String,
     value: String

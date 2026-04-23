@@ -1,7 +1,10 @@
 package com.mindmatrix.employeetracker.domain.repository
 
-import com.mindmatrix.employeetracker.domain.model.Employee
-
+/**
+ * @deprecated This interface is part of the legacy architecture and has been replaced by 
+ * com.mindmatrix.employeetracker.data.repository.IEmployeeRepository.
+ */
+@Deprecated("Use com.mindmatrix.employeetracker.data.repository.IEmployeeRepository instead")
 interface EmployeeRepository {
-    suspend fun getEmployees(): List<Employee>
+    // Legacy stub
 }

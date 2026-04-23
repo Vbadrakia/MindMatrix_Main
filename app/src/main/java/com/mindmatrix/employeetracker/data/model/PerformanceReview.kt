@@ -1,15 +1,11 @@
 package com.mindmatrix.employeetracker.data.model
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
  * Represents a performance review for an employee.
  * Maps to Firestore "performance_reviews" collection and Room table.
  */
-@Entity(tableName = "performance_reviews")
 data class PerformanceReview(
-    @PrimaryKey
     val id: String = "",
     val employeeId: String = "",
     val reviewerId: String = "",

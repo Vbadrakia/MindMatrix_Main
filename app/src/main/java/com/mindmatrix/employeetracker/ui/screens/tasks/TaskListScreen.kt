@@ -1,5 +1,9 @@
 package com.mindmatrix.employeetracker.ui.screens.tasks
 
+import androidx.compose.ui.res.stringResource
+import com.mindmatrix.employeetracker.R
+import com.mindmatrix.employeetracker.data.model.Task
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,8 +44,17 @@ fun TaskListScreen(
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val employeeState by employeeViewModel.state.collectAsStateWithLifecycle()
     
+    val snackbarHostState = remember { SnackbarHostState() }
     val currentUser = authState.currentEmployee
-    val canAddTask = currentUser?.role == com.mindmatrix.employeetracker.data.model.UserRole.ADMIN || 
+
+    // Handle Errors
+    LaunchedEffect(state.error) {
+        state.error?.let {
+            snackbarHostState.showSnackbar(it)
+            taskViewModel.clearError()
+        }
+    }
+    val canAddTask = currentUser?.role == com.mindmatrix.employeetracker.data.model.UserRole.ADMIN ||
                      currentUser?.role == com.mindmatrix.employeetracker.data.model.UserRole.LEAD
 
     var showAddDialog by remember { mutableStateOf(false) }
@@ -82,6 +95,7 @@ fun TaskListScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             DashboardTopBar(
                 title = stringResource(R.string.tasks),
@@ -407,7 +421,7 @@ fun TaskCard(
                     }
                     
                     IconButton(
-                        onClick = { /* Navigate to task detail */ },
+                        onClick = onClick,
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(

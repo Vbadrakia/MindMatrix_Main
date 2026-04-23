@@ -18,7 +18,6 @@ import com.mindmatrix.employeetracker.data.model.Task
 import com.mindmatrix.employeetracker.data.model.TaskPriority
 import com.mindmatrix.employeetracker.data.model.TaskStatus
 import com.mindmatrix.employeetracker.ui.theme.Primary
-import com.mindmatrix.employeetracker.ui.screens.dashboard.getTaskPriorityStringRes
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId

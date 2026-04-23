@@ -1,5 +1,8 @@
 package com.mindmatrix.employeetracker.ui.screens.departments
 
+import androidx.compose.ui.res.stringResource
+import com.mindmatrix.employeetracker.R
+import com.mindmatrix.employeetracker.data.model.Employee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn

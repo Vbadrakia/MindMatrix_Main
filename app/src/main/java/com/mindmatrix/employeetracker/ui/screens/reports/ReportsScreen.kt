@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mindmatrix.employeetracker.R
 import com.mindmatrix.employeetracker.data.model.TaskStatus
 import com.mindmatrix.employeetracker.data.model.UserRole
 import com.mindmatrix.employeetracker.ui.components.*
@@ -53,6 +54,7 @@ fun ReportsScreen(
     val context = LocalContext.current
     val currentEmployee = authState.currentEmployee
     val isAdmin = currentEmployee?.role == UserRole.ADMIN
+    val isLead = currentEmployee?.role == UserRole.LEAD
 
     var selectedDeptFilter by remember { mutableStateOf<String?>(null) }
     var selectedCategoryFilter by remember { mutableStateOf<String?>("Overall") }
@@ -102,7 +104,7 @@ fun ReportsScreen(
                             csvData.append("${entry.department},")
                             csvData.append("${String.format(Locale.getDefault(), "%.2f", entry.averageScore)},")
                             csvData.append("${entry.rank},")
-                            csvData.append("${selectedCategoryFilter ?: stringResource(R.string.filter_overall)},")
+                            csvData.append("${selectedCategoryFilter ?: context.getString(R.string.filter_overall)},")
                             csvData.append("${java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())}\n")
                         }
                         

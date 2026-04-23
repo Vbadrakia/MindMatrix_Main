@@ -1,5 +1,7 @@
 package com.mindmatrix.employeetracker.ui.screens.reports
 
+import androidx.compose.ui.res.stringResource
+import com.mindmatrix.employeetracker.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

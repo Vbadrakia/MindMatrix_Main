@@ -1,15 +1,11 @@
 package com.mindmatrix.employeetracker.data.model
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
  * Represents an attendance record for an employee.
  * Maps to Firestore "attendance" collection and Room "attendance" table.
  */
-@Entity(tableName = "attendance")
 data class AttendanceRecord(
-    @PrimaryKey
     val id: String = "",
     val employeeId: String = "",
     val date: String = "",

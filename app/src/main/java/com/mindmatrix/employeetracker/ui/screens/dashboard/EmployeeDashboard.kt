@@ -149,8 +149,8 @@ fun EmployeeDashboardScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    TabItem(label = stringResource(R.string.tasks), isSelected = selectedTab == 0, onClick = { selectedTab = 0 })
-                    TabItem(label = stringResource(R.string.performance), isSelected = selectedTab == 1, onClick = { selectedTab = 1 })
+                    TabItem(text = stringResource(R.string.tasks), selected = selectedTab == 0, onClick = { selectedTab = 0 })
+                    TabItem(text = stringResource(R.string.performance), selected = selectedTab == 1, onClick = { selectedTab = 1 })
                 }
             }
 
@@ -165,7 +165,7 @@ fun EmployeeDashboardScreen(
                     )
                 }
                 
-                val deptAvg = performanceState.departmentAverages.find { it.departmentName == currentEmployee?.department }?.averageScore ?: 0.0
+                val deptAvg = performanceState.departmentAverages.find { it.department == currentEmployee?.department }?.averageScore ?: 0.0
                 item {
                     PerformanceComparisonCard(
                         myScore = performanceState.averageScore.toFloat(),
@@ -335,8 +335,8 @@ fun ProfileHeaderCard(name: String, designation: String, department: String, onP
             Spacer(modifier = Modifier.height(20.dp))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatusBadge(text = stringResource(R.string.top_performer), icon = Icons.Default.TrendingUp, color = SuccessContainer, textColor = Success)
-                StatusBadge(text = stringResource(R.string.tenure_years_format, 3), icon = Icons.Default.Schedule, color = SurfaceVariant, textColor = OnSurfaceVariant)
+                StatusBadge(status = stringResource(R.string.top_performer), color = Success)
+                StatusBadge(status = stringResource(R.string.tenure_years_format, 3), color = OnSurfaceVariant)
             }
         }
     }

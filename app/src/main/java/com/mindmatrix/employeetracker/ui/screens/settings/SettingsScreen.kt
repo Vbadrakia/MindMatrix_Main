@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
 import com.mindmatrix.employeetracker.R
 import com.mindmatrix.employeetracker.data.model.UserRole
 import com.mindmatrix.employeetracker.ui.components.DashboardTopBar
@@ -42,6 +43,7 @@ fun SettingsScreen(
     val seedSuccess by settingsViewModel.seedSuccess.collectAsStateWithLifecycle()
     val seedError by settingsViewModel.error.collectAsStateWithLifecycle()
     
+    val context = LocalContext.current
     val currentEmployee = authState.currentEmployee
     var showSignOutDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }

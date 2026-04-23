@@ -1,5 +1,8 @@
 package com.mindmatrix.employeetracker.ui.components
 
+import androidx.compose.ui.res.stringResource
+import com.mindmatrix.employeetracker.R
+import coil.compose.SubcomposeAsyncImage
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -41,6 +44,92 @@ import com.mindmatrix.employeetracker.data.model.TaskStatus
 import com.mindmatrix.employeetracker.ui.theme.*
 import com.mindmatrix.employeetracker.viewmodel.Insight
 import com.mindmatrix.employeetracker.viewmodel.InsightPriority
+
+@Composable
+fun TabItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = if (selected) Primary else Color.Transparent
+    val contentColor = if (selected) Color.White else OnSurfaceVariant
+    
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        color = backgroundColor,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Box(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = contentColor
+            )
+        }
+    }
+}
+
+@Composable
+fun StatusBadge(
+    status: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text = status,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+    }
+}
+
+@Composable
+fun TaskBadge(
+    priority: TaskPriority,
+    modifier: Modifier = Modifier
+) {
+    val color = getTaskPriorityColor(priority)
+    val text = getLocalizedTaskPriority(priority)
+    
+    Surface(
+        modifier = modifier,
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
+    }
+}
 
 @Composable
 fun BadgeChip(
@@ -204,8 +293,6 @@ fun DashboardTopBar(
         }
     }
 }
-
-import coil.compose.SubcomposeAsyncImage
 
 @Composable
 fun EmployeeAvatar(
@@ -557,6 +644,15 @@ fun getTaskPriorityColor(priority: TaskPriority): Color {
         TaskPriority.MEDIUM -> PriorityMedium
         TaskPriority.HIGH -> PriorityHigh
         TaskPriority.CRITICAL -> PriorityCritical
+    }
+}
+
+fun getTaskPriorityStringRes(priority: TaskPriority): Int {
+    return when (priority) {
+        TaskPriority.LOW -> R.string.task_priority_low
+        TaskPriority.MEDIUM -> R.string.task_priority_medium
+        TaskPriority.HIGH -> R.string.task_priority_high
+        TaskPriority.CRITICAL -> R.string.task_priority_critical
     }
 }
 
@@ -1203,8 +1299,8 @@ fun StarRatingWidget(
             var starModifier = Modifier.size(starSize)
             if (onRatingChange != null) {
                 starModifier = starModifier.clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = androidx.compose.material.ripple.rememberRipple(bounded = false, radius = starSize / 1.5f),
+                interactionSource = remember { MutableInteractionSource() },
+                indication = rememberRipple(bounded = false, radius = starSize / 1.5f),
                     onClick = { onRatingChange(i) }
                 )
             }

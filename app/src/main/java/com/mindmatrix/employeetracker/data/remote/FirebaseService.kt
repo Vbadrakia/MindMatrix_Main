@@ -1,11 +1,8 @@
 package com.mindmatrix.employeetracker.data.remote
 
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
-
-class FirebaseService(
-    private val firestore: FirebaseFirestore
-) {
-    suspend fun getEmployees() =
-        firestore.collection("employees").get().await()
-}
+/**
+ * DEPRECATED: This service is no longer used.
+ * Repositories now use FirebaseFirestore directly.
+ */
+@Deprecated("Use FirebaseFirestore directly in repositories")
+class LegacyFirebaseService

@@ -1,8 +1,5 @@
 package com.mindmatrix.employeetracker.data.model
 
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.PrimaryKey
 
 /**
  * Represents user roles in the Employee Tracker system.
@@ -17,12 +14,7 @@ enum class UserRole {
  * Represents an employee/user in the system.
  * Maps to Firestore "employees" collection and Room "employees" table.
  */
-@Entity(
-    tableName = "employees",
-    indices = [Index(value = ["email"], unique = true), Index(value = ["department"]), Index(value = ["managerId"])]
-)
 data class Employee(
-    @PrimaryKey
     val id: String = "",
     val email: String = "",
     val name: String = "",

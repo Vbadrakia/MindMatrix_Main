@@ -32,15 +32,14 @@ class TaskViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-    init {
-        loadTasks()
-    }
+    private var tasksJob: kotlinx.coroutines.Job? = null
 
     fun loadTasks() {
-        viewModelScope.launch {
+        tasksJob?.cancel()
+        tasksJob = viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
             taskRepository.syncTasks()
             _isRefreshing.value = true
-            _state.value = _state.value.copy(isLoading = true)
             taskRepository.getAllTasks().collect { tasks ->
                 _state.value = _state.value.copy(
                     tasks = tasks,
@@ -53,10 +52,14 @@ class TaskViewModel @Inject constructor(
     }
 
     fun loadTasksForLead(leadId: String) {
-        viewModelScope.launch {
-            _isRefreshing.value = true
+        tasksJob?.cancel()
+        tasksJob = viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
+            _isRefreshing.value = true
+            // Leads might want to sync as well
+            taskRepository.syncTasks()
             taskRepository.getAllTasks().collect { tasks ->
+                // In a real app, you might filter by department or leadId here
                 _state.value = _state.value.copy(
                     tasks = tasks,
                     filteredTasks = filterTasks(tasks, _state.value.searchQuery, _state.value.selectedStatus),
@@ -68,8 +71,11 @@ class TaskViewModel @Inject constructor(
     }
 
     fun loadTasksForEmployee(employeeId: String) {
-        viewModelScope.launch {
+        tasksJob?.cancel()
+        tasksJob = viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
+            // Even employees should sync to get latest assignments
+            taskRepository.syncTasks()
             taskRepository.getTasksForEmployee(employeeId).collect { tasks ->
                 _state.value = _state.value.copy(
                     tasks = tasks,

@@ -1,5 +1,9 @@
 package com.mindmatrix.employeetracker.ui.screens.performance
 
+import androidx.compose.ui.res.stringResource
+import com.mindmatrix.employeetracker.R
+import com.mindmatrix.employeetracker.data.model.PerformanceReview
+import com.mindmatrix.employeetracker.data.model.ReviewStatus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -150,7 +154,6 @@ fun PerformanceHistoryScreen(
     }
 }
 
-@Composable
 @Composable
 fun PerformanceReviewCard(
     review: com.mindmatrix.employeetracker.data.model.PerformanceReview,

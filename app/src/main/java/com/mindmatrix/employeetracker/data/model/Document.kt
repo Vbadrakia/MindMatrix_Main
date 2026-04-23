@@ -1,11 +1,7 @@
 package com.mindmatrix.employeetracker.data.model
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 
-@Entity(tableName = "documents")
 data class Document(
-    @PrimaryKey
     val id: String = "",
     val name: String = "",
     val url: String = "",

@@ -3,13 +3,11 @@ package com.mindmatrix.employeetracker.data.repository
 import android.net.Uri
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
-import com.mindmatrix.employeetracker.data.local.dao.EmployeeDao
 import com.mindmatrix.employeetracker.data.model.Employee
 import com.mindmatrix.employeetracker.data.model.UserRole
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,18 +15,56 @@ import javax.inject.Singleton
 @Singleton
 class EmployeeRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val storage: FirebaseStorage,
-    private val employeeDao: EmployeeDao
+    private val storage: FirebaseStorage
 ) : IEmployeeRepository {
     private val collection = firestore.collection("employees")
     private val storageRef = storage.reference.child("profile_images")
 
-    override fun getAllEmployees(): Flow<List<Employee>> = employeeDao.getAllEmployees()
+    override fun getAllEmployees(): Flow<List<Employee>> = callbackFlow {
+        val listener = collection
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val employees = snapshot?.documents?.map { doc ->
+                    Employee.fromMap(doc.id, doc.data ?: emptyMap())
+                } ?: emptyList()
+                trySend(employees)
+            }
+        awaitClose { listener.remove() }
+    }
 
-    override fun getEmployeeById(id: String): Flow<Employee?> = employeeDao.getEmployeeById(id)
+    override fun getEmployeeById(id: String): Flow<Employee?> = callbackFlow {
+        val listener = collection.document(id)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val employee = snapshot?.let { doc ->
+                    if (doc.exists()) Employee.fromMap(doc.id, doc.data ?: emptyMap()) else null
+                }
+                trySend(employee)
+            }
+        awaitClose { listener.remove() }
+    }
 
-    override fun getEmployeesByDepartment(department: String): Flow<List<Employee>> = 
-        employeeDao.getEmployeesByDepartment(department)
+    override fun getEmployeesByDepartment(department: String): Flow<List<Employee>> = callbackFlow {
+        val listener = collection
+            .whereEqualTo("department", department)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val employees = snapshot?.documents?.map { doc ->
+                    Employee.fromMap(doc.id, doc.data ?: emptyMap())
+                } ?: emptyList()
+                trySend(employees)
+            }
+        awaitClose { listener.remove() }
+    }
 
     override fun getEmployeesByManager(managerId: String): Flow<List<Employee>> = callbackFlow {
         val listener = collection
@@ -86,8 +122,6 @@ class EmployeeRepository @Inject constructor(
             collection.document(authUid).set(employee.toMap().toMutableMap().apply { put("id", authUid) }).await()
             authUid
         }
-        val finalEmployee = employee.copy(id = id)
-        employeeDao.insertEmployee(finalEmployee)
         Result.success(id)
     } catch (e: Exception) {
         Result.failure(e)
@@ -95,7 +129,6 @@ class EmployeeRepository @Inject constructor(
 
     override suspend fun updateEmployee(employee: Employee): Result<Unit> = try {
         collection.document(employee.id).set(employee.toMap()).await()
-        employeeDao.updateEmployee(employee)
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
@@ -103,50 +136,24 @@ class EmployeeRepository @Inject constructor(
 
     override suspend fun deleteEmployee(id: String): Result<Unit> = try {
         collection.document(id).delete().await()
-        employeeDao.deleteEmployeeById(id)
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
     }
 
     override suspend fun getEmployeeByEmail(email: String): Employee? = try {
-        val local = employeeDao.getAllEmployees().first().find { it.email == email }
-        if (local != null) {
-            local
-        } else {
-            val snapshot = collection
-                .whereEqualTo("email", email)
-                .get()
-                .await()
-            snapshot.documents.firstOrNull()?.let { doc ->
-                val employee = Employee.fromMap(doc.id, doc.data ?: emptyMap())
-                employeeDao.insertEmployee(employee)
-                employee
-            }
+        val snapshot = collection
+            .whereEqualTo("email", email)
+            .get()
+            .await()
+        snapshot.documents.firstOrNull()?.let { doc ->
+            Employee.fromMap(doc.id, doc.data ?: emptyMap())
         }
     } catch (e: Exception) {
         null
     }
 
-    override suspend fun syncEmployees(): Result<Unit> = try {
-        val snapshot = collection.get().await()
-        val remoteEmployees = snapshot.documents.map {
-            Employee.fromMap(it.id, it.data ?: emptyMap())
-        }
-
-        val localEmployees = employeeDao.getAllEmployees().first()
-        
-        remoteEmployees.forEach { remote ->
-            val local = localEmployees.find { it.id == remote.id }
-            if (local == null || remote.lastUpdated > local.lastUpdated) {
-                employeeDao.insertEmployee(remote)
-            }
-        }
-        
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+    override suspend fun syncEmployees(): Result<Unit> = Result.success(Unit)
 
     override suspend fun uploadProfileImage(userId: String, imageUri: Uri): Result<String> = try {
         val ref = storageRef.child("$userId.jpg")
@@ -154,11 +161,7 @@ class EmployeeRepository @Inject constructor(
         val downloadUrl = ref.downloadUrl.await().toString()
         
         // Update employee document with the new photo URL
-        val employee = employeeDao.getEmployeeById(userId).first()
-        if (employee != null) {
-            val updatedEmployee = employee.copy(profileImageUrl = downloadUrl)
-            updateEmployee(updatedEmployee).getOrThrow()
-        }
+        collection.document(userId).update("profileImageUrl", downloadUrl).await()
         
         Result.success(downloadUrl)
     } catch (e: Exception) {

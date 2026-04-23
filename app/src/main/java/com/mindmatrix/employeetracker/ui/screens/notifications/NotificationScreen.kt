@@ -1,5 +1,9 @@
 package com.mindmatrix.employeetracker.ui.screens.notifications
 
+import androidx.compose.ui.res.stringResource
+import com.mindmatrix.employeetracker.R
+import com.mindmatrix.employeetracker.data.model.Notification
+import com.mindmatrix.employeetracker.data.model.NotificationType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +25,8 @@ import com.mindmatrix.employeetracker.ui.components.DashboardTopBar
 import com.mindmatrix.employeetracker.ui.theme.*
 import com.mindmatrix.employeetracker.viewmodel.AuthViewModel
 import com.mindmatrix.employeetracker.viewmodel.NotificationViewModel
+import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +46,7 @@ fun NotificationScreen(
         }
     }
 
+    Scaffold(
         topBar = {
             DashboardTopBar(
                 title = stringResource(R.string.notifications),

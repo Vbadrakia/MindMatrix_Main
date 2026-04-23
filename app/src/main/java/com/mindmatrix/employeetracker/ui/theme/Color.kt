@@ -46,6 +46,9 @@ val OnSurface = Color(0xFF202124)
 val OnSurfaceVariant = Color(0xFF5F6368)
 val Outline = Color(0xFFDADCE0)
 
+// Info / Neutral Informational
+val Info = Color(0xFF1976D2)
+
 // Podium colors
 val Gold = Color(0xFFFFD700)
 val Silver = Color(0xFFBDBDBD)

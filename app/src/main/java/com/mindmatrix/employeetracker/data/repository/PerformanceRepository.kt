@@ -1,7 +1,6 @@
 package com.mindmatrix.employeetracker.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
-import com.mindmatrix.employeetracker.data.local.dao.PerformanceDao
 import com.mindmatrix.employeetracker.data.model.DepartmentAverage
 import com.mindmatrix.employeetracker.data.model.LeaderboardEntry
 import com.mindmatrix.employeetracker.data.model.PerformanceReview
@@ -14,21 +13,43 @@ import javax.inject.Singleton
 
 @Singleton
 class PerformanceRepository @Inject constructor(
-    private val firestore: FirebaseFirestore,
-    private val performanceDao: PerformanceDao
+    private val firestore: FirebaseFirestore
 ) : IPerformanceRepository {
     private val collection = firestore.collection("performance_reviews")
 
-    override fun getReviewsForEmployee(employeeId: String): Flow<List<PerformanceReview>> = 
-        performanceDao.getReviewsByEmployee(employeeId)
+    override fun getReviewsForEmployee(employeeId: String): Flow<List<PerformanceReview>> = callbackFlow {
+        val listener = collection
+            .whereEqualTo("employeeId", employeeId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val reviews = snapshot?.documents?.map { doc ->
+                    PerformanceReview.fromMap(doc.id, doc.data ?: emptyMap())
+                } ?: emptyList()
+                trySend(reviews)
+            }
+        awaitClose { listener.remove() }
+    }
 
-    override fun getAllReviews(): Flow<List<PerformanceReview>> = 
-        performanceDao.getAllReviews()
+    override fun getAllReviews(): Flow<List<PerformanceReview>> = callbackFlow {
+        val listener = collection
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val reviews = snapshot?.documents?.map { doc ->
+                    PerformanceReview.fromMap(doc.id, doc.data ?: emptyMap())
+                } ?: emptyList()
+                trySend(reviews)
+            }
+        awaitClose { listener.remove() }
+    }
 
     override suspend fun addReview(review: PerformanceReview): Result<String> = try {
         val docRef = collection.add(review.toMap()).await()
-        val finalReview = review.copy(id = docRef.id)
-        performanceDao.insertReview(finalReview)
         Result.success(docRef.id)
     } catch (e: Exception) {
         Result.failure(e)
@@ -36,7 +57,6 @@ class PerformanceRepository @Inject constructor(
 
     override suspend fun updateReview(review: PerformanceReview): Result<Unit> = try {
         collection.document(review.id).set(review.toMap()).await()
-        performanceDao.updateReview(review)
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
@@ -121,15 +141,5 @@ class PerformanceRepository @Inject constructor(
         emptyList()
     }
 
-    override suspend fun syncPerformanceData(): Result<Unit> = try {
-        val snapshot = collection.get().await()
-        val reviews = snapshot.documents.map { doc ->
-            PerformanceReview.fromMap(doc.id, doc.data ?: emptyMap())
-        }
-        performanceDao.deleteAllReviews()
-        performanceDao.insertReviews(reviews)
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+    override suspend fun syncPerformanceData(): Result<Unit> = Result.success(Unit) // No longer needed with real-time sync
 }

@@ -1,19 +1,11 @@
 package com.mindmatrix.employeetracker.data.model
 
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.PrimaryKey
 
 /**
  * Represents a task assigned to an employee.
  * Maps to Firestore "tasks" collection and Room "tasks" table.
  */
-@Entity(
-    tableName = "tasks",
-    indices = [Index(value = ["assignedTo"]), Index(value = ["status"])]
-)
 data class Task(
-    @PrimaryKey
     val id: String = "",
     val title: String = "",
     val description: String = "",
